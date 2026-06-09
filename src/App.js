@@ -314,6 +314,22 @@ function AdminPanel({ session, onLogout }) {
     reload();
   };
 
+  const handleAddCat = async (form) => {
+    const id = "cat_" + Date.now();
+    const order = categories.length + 1;
+    await dbSet(`schools/${schoolCode}/categories/${id}`, { title: form.title, icon: form.icon, color: form.color, order });
+    showToast(`"${form.title}" kategorisi eklendi!`);
+    setScreen("tasks");
+    reload();
+  };
+
+  const handleDelCat = async (catId) => {
+    await dbDelete(`schools/${schoolCode}/categories/${catId}`);
+    showToast("Kategori silindi.", C.red);
+    setScreen("tasks");
+    reload();
+  };
+
   if (loading) return <div style={{ background:C.bg, minHeight:"100vh" }}><Spinner /></div>;
 
   const tabs = [
@@ -337,8 +353,9 @@ function AdminPanel({ session, onLogout }) {
 
       <div style={{ paddingTop:16 }}>
         {screen==="dashboard"     && <Dashboard cats={categories} teachers={teachers} allTasks={allTasks} school={school} onNav={setScreen} onTask={t=>{setSelTask(t);setScreen("taskDetail");}} onCat={c=>{setSelCat(c);setScreen("catDetail");}} />}
-        {screen==="tasks"         && <TaskList cats={categories} teachers={teachers} onTask={t=>{setSelTask(t);setScreen("taskDetail");}} onNav={setScreen} onCat={c=>setSelCat(c)} />}
-        {screen==="catDetail"     && currentCat && <CatDetail cat={currentCat} teachers={teachers} onBack={()=>setScreen("tasks")} onNav={setScreen} onTask={t=>{setSelTask(t);setScreen("taskDetail");}} onDel={handleDelTask} />}
+        {screen==="tasks"         && <TaskList cats={categories} teachers={teachers} onTask={t=>{setSelTask(t);setScreen("taskDetail");}} onNav={setScreen} onCat={c=>setSelCat(c)} onAddCat={()=>setScreen("addCat")} />}
+        {screen==="addCat"        && <AddCategory onAdd={handleAddCat} onBack={()=>setScreen("tasks")} />}
+        {screen==="catDetail"     && currentCat && <CatDetail cat={currentCat} teachers={teachers} onBack={()=>setScreen("tasks")} onNav={setScreen} onTask={t=>{setSelTask(t);setScreen("taskDetail");}} onDel={handleDelTask} onDelCat={handleDelCat} />}
         {screen==="addTask"       && currentCat && <AddTask cat={currentCat} teachers={teachers} onAdd={handleAddTask} onBack={()=>setScreen("catDetail")} />}
         {screen==="taskDetail"    && selTask     && <TaskDetail task={selTask} teachers={teachers} cats={categories} onBack={()=>setScreen("tasks")} onStatus={handleStatus} onReminder={handleReminder} onCheck={handleCheck} />}
         {screen==="teachers"      && <TeacherList teachers={teachers} allTasks={allTasks} onSel={t=>{setSelTeacher(t);setScreen("teacherDetail");}} onNav={setScreen} />}
@@ -350,7 +367,7 @@ function AdminPanel({ session, onLogout }) {
 
       <div style={{ position:"fixed", bottom:0, left:"50%", transform:"translateX(-50%)", width:"100%", maxWidth:390, background:C.surface, borderTop:`1px solid ${C.border}`, display:"flex" }}>
         {tabs.map(tab => {
-          const active = screen===tab.id||(tab.id==="tasks"&&["taskDetail","catDetail","addTask"].includes(screen))||(tab.id==="teachers"&&["teacherDetail","addTeacher"].includes(screen));
+          const active = screen===tab.id||(tab.id==="tasks"&&["taskDetail","catDetail","addTask","addCat"].includes(screen))||(tab.id==="teachers"&&["teacherDetail","addTeacher"].includes(screen));
           return <button key={tab.id} onClick={()=>setScreen(tab.id)} style={{ flex:1, background:"none", border:"none", padding:"10px 0 12px", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:3 }}><span style={{ fontSize:20, filter:active?"none":"grayscale(1) opacity(0.5)" }}>{tab.icon}</span><span style={{ fontSize:10, color:active?C.accent:C.textDim, fontWeight:active?700:400 }}>{tab.label}</span></button>;
         })}
       </div>
@@ -390,13 +407,65 @@ function Dashboard({ cats, teachers, allTasks, school, onNav, onTask, onCat }) {
   );
 }
 
+
+// ─── KATEGORİ EKLE ────────────────────────────────────────────
+const CAT_ICONS = ["📂","🏅","🎯","📝","🏆","📌","🎓","📊","🔔","📅","🌟","📋","🎨","🔧","📣"];
+const CAT_COLORS = ["#4f8ef7","#f97316","#a78bfa","#34d399","#f87171","#fbbf24","#ec4899","#06b6d4","#84cc16","#f59e0b"];
+
+function AddCategory({ onAdd, onBack }) {
+  const [title, setTitle] = useState("");
+  const [icon, setIcon] = useState("📂");
+  const [color, setColor] = useState("#4f8ef7");
+  const [saving, setSaving] = useState(false);
+  const ok = title.trim().length > 0;
+  const inp = { width:"100%", background:C.surface, border:`1px solid ${C.border}`, borderRadius:10, padding:"11px 13px", color:C.text, fontSize:14, outline:"none", boxSizing:"border-box" };
+  const lbl = { fontSize:12, color:C.textMuted, marginBottom:6, fontWeight:600, display:"block" };
+  return (
+    <div style={{ padding:"0 16px 24px" }}>
+      <button onClick={onBack} style={{ background:"none", border:"none", color:C.accent, fontSize:14, cursor:"pointer", marginBottom:16, padding:0, fontWeight:600 }}>← Geri</button>
+      <div style={{ fontSize:20, fontWeight:800, color:C.text, marginBottom:20 }}>Yeni Kategori Ekle</div>
+
+      {/* Önizleme */}
+      <div style={{ background:C.card, borderRadius:14, padding:14, border:`1px solid ${color}44`, borderLeft:`4px solid ${color}`, marginBottom:20, display:"flex", alignItems:"center", gap:12 }}>
+        <div style={{ width:44, height:44, borderRadius:12, background:`${color}22`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22 }}>{icon}</div>
+        <div><div style={{ fontSize:15, fontWeight:800, color:C.text }}>{title||"Kategori Adı"}</div><div style={{ fontSize:12, color:C.textMuted, marginTop:2 }}>0 alt görev</div></div>
+      </div>
+
+      <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+        <div><label style={lbl}>Kategori Adı</label><input value={title} onChange={e=>setTitle(e.target.value)} placeholder="Örn: Veli İletişimi" style={inp}/></div>
+
+        <div>
+          <label style={lbl}>İkon Seç</label>
+          <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
+            {CAT_ICONS.map(ic=><button key={ic} onClick={()=>setIcon(ic)} style={{ width:42, height:42, fontSize:20, borderRadius:10, background:icon===ic?`${color}22`:C.surface, border:`2px solid ${icon===ic?color:C.border}`, cursor:"pointer" }}>{ic}</button>)}
+          </div>
+        </div>
+
+        <div>
+          <label style={lbl}>Renk Seç</label>
+          <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
+            {CAT_COLORS.map(cl=><button key={cl} onClick={()=>setColor(cl)} style={{ width:32, height:32, borderRadius:"50%", background:cl, border:`3px solid ${color===cl?"#fff":cl}`, boxShadow:color===cl?"0 0 0 2px "+cl:"none", cursor:"pointer" }}/>)}
+          </div>
+        </div>
+
+        <button onClick={async()=>{if(!ok||saving)return;setSaving(true);await onAdd({title:title.trim(),icon,color});setSaving(false);}} style={{ background:color, border:"none", color:"#fff", borderRadius:14, padding:"14px 0", fontSize:15, fontWeight:700, cursor:ok?"pointer":"default", opacity:ok?1:0.4 }}>
+          {saving?"Ekleniyor...":"Kategoriyi Ekle"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── GÖREV LİSTESİ ────────────────────────────────────────────
-function TaskList({ cats, teachers, onTask, onNav, onCat }) {
+function TaskList({ cats, teachers, onTask, onNav, onCat, onAddCat }) {
   const [exp, setExp] = useState({});
   const toggle = id => setExp(p=>({...p,[id]:p[id]===false}));
   return (
     <div style={{ padding:"0 16px 24px" }}>
-      <div style={{ fontSize:22, fontWeight:800, color:C.text, marginBottom:20 }}>Görevler</div>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
+        <div style={{ fontSize:22, fontWeight:800, color:C.text }}>Görevler</div>
+        <button onClick={onAddCat} style={{ background:C.accent, border:"none", color:"#fff", borderRadius:10, padding:"7px 14px", fontSize:13, fontWeight:700, cursor:"pointer" }}>+ Kategori</button>
+      </div>
       <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
         {cats.map(cat=>{const isOpen=exp[cat.id]!==false;const late=cat.tasks.filter(t=>t.status==="gecikmiş").length;const done=cat.tasks.filter(t=>t.status==="tamamlandı").length;return(<div key={cat.id}><div onClick={()=>toggle(cat.id)} style={{ display:"flex", alignItems:"center", gap:10, padding:"11px 14px", background:C.card, border:`1px solid ${cat.color}44`, borderRadius:isOpen?"14px 14px 0 0":14, cursor:"pointer", borderLeft:`4px solid ${cat.color}` }}><span style={{ fontSize:20 }}>{cat.icon}</span><div style={{ flex:1 }}><div style={{ fontSize:15, fontWeight:800, color:C.text }}>{cat.title}</div><div style={{ fontSize:11, color:C.textMuted, marginTop:1 }}>{done}/{cat.tasks.length} tamamlandı{late>0&&<span style={{ color:C.red, marginLeft:6 }}>⚠ {late}</span>}</div></div><button onClick={e=>{e.stopPropagation();onCat(cat);onNav("addTask");}} style={{ background:`${cat.color}22`, border:`1px solid ${cat.color}44`, color:cat.color, borderRadius:8, padding:"4px 9px", fontSize:11, fontWeight:700, cursor:"pointer" }}>+ Alt</button><span style={{ color:C.textDim, fontSize:16, transform:isOpen?"rotate(90deg)":"rotate(0)", transition:"transform 0.2s" }}>›</span></div>{isOpen&&(<div style={{ border:`1px solid ${cat.color}33`, borderTop:"none", borderRadius:"0 0 14px 14px", overflow:"hidden" }}>{cat.tasks.length===0&&<div style={{ padding:16, textAlign:"center", color:C.textMuted, fontSize:13 }}>Henüz alt görev yok.</div>}{cat.tasks.map((task,idx)=>{const sc=STATUS[task.status];const dl=daysLeft(task.dueDate);return(<div key={task.id} onClick={()=>onTask(task)} style={{ padding:"11px 14px", cursor:"pointer", background:C.surface, borderBottom:idx<cat.tasks.length-1?`1px solid ${C.border}`:"none" }}><div style={{ display:"flex", justifyContent:"space-between", gap:8, marginBottom:6 }}><div style={{ fontSize:13, fontWeight:600, color:C.text, flex:1 }}>{task.title}</div><Badge label={sc.label} color={sc.color} bg={sc.bg}/></div><div style={{ display:"flex", alignItems:"center", gap:8 }}><AvatarStack ids={task.teacherIds||[]} teachers={teachers} size={22}/><span style={{ fontSize:11, color:C.textMuted, flex:1 }}>{(task.teacherIds||[]).length===1?teachers.find(t=>t.id===task.teacherIds[0])?.name:`${(task.teacherIds||[]).length} öğretmen`}</span><span style={{ fontSize:10, color:dl<0?C.red:dl<=3?C.yellow:C.textDim, fontWeight:700 }}>📅 {fmtDate(task.dueDate)}</span></div></div>);})}</div>)}</div>);})}
       </div>
@@ -405,15 +474,26 @@ function TaskList({ cats, teachers, onTask, onNav, onCat }) {
 }
 
 // ─── KATEGORİ DETAY ───────────────────────────────────────────
-function CatDetail({ cat, teachers, onBack, onNav, onTask, onDel }) {
+function CatDetail({ cat, teachers, onBack, onNav, onTask, onDel, onDelCat }) {
   const [conf, setConf] = useState(null);
+  const [confCat, setConfCat] = useState(false);
   return (
     <div style={{ padding:"0 16px 24px" }}>
       <button onClick={onBack} style={{ background:"none", border:"none", color:C.accent, fontSize:14, cursor:"pointer", marginBottom:16, padding:0, fontWeight:600 }}>← Geri</button>
-      <div style={{ background:C.card, borderRadius:18, padding:18, border:`1px solid ${cat.color}44`, borderLeft:`4px solid ${cat.color}`, marginBottom:16, display:"flex", gap:14, alignItems:"center" }}>
+      <div style={{ background:C.card, borderRadius:18, padding:18, border:`1px solid ${cat.color}44`, borderLeft:`4px solid ${cat.color}`, marginBottom:12, display:"flex", gap:14, alignItems:"center" }}>
         <div style={{ width:48, height:48, borderRadius:14, background:`${cat.color}22`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:24 }}>{cat.icon}</div>
-        <div><div style={{ fontSize:18, fontWeight:800, color:C.text }}>{cat.title}</div><div style={{ fontSize:13, color:C.textMuted, marginTop:2 }}>{cat.tasks.length} alt görev</div></div>
+        <div style={{ flex:1 }}><div style={{ fontSize:18, fontWeight:800, color:C.text }}>{cat.title}</div><div style={{ fontSize:13, color:C.textMuted, marginTop:2 }}>{cat.tasks.length} alt görev</div></div>
+        <button onClick={()=>setConfCat(true)} style={{ background:C.redSoft, border:`1px solid ${C.red}33`, color:C.red, borderRadius:9, padding:"6px 10px", fontSize:12, fontWeight:700, cursor:"pointer", flexShrink:0 }}>🗑 Sil</button>
       </div>
+      {confCat && (
+        <div style={{ background:C.redSoft, border:`1px solid ${C.red}44`, borderRadius:12, padding:"12px 14px", marginBottom:12, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <span style={{ fontSize:13, color:C.red, fontWeight:600 }}>"{cat.title}" kategorisi silinsin mi?</span>
+          <div style={{ display:"flex", gap:8 }}>
+            <button onClick={()=>setConfCat(false)} style={{ background:C.surface, border:`1px solid ${C.border}`, color:C.textMuted, borderRadius:8, padding:"5px 12px", fontSize:12, cursor:"pointer" }}>İptal</button>
+            <button onClick={()=>onDelCat(cat.id)} style={{ background:C.red, border:"none", color:"#fff", borderRadius:8, padding:"5px 12px", fontSize:12, fontWeight:700, cursor:"pointer" }}>Sil</button>
+          </div>
+        </div>
+      )}
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
         <div style={{ fontSize:14, fontWeight:700, color:C.text }}>Alt Görevler</div>
         <button onClick={()=>onNav("addTask")} style={{ background:`${cat.color}22`, border:`1px solid ${cat.color}44`, color:cat.color, borderRadius:9, padding:"6px 12px", fontSize:12, fontWeight:700, cursor:"pointer" }}>+ Ekle</button>
