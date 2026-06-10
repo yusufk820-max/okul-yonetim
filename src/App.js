@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { dbGet, dbSet, dbPush, dbUpdate, dbDelete, dbListen } from "./firebase";
+import Landing from "./Landing";        // ← YENİ SATIR
 
 // ─── RENKLER ─────────────────────────────────────────────────
 const C = {
@@ -759,7 +760,7 @@ export default function App() {
   const [session, setSession] = useState(() => {
     try { const s = localStorage.getItem("okul_session"); return s ? JSON.parse(s) : null; } catch { return null; }
   });
-  const [showSetup, setShowSetup] = useState(false);
+  const [view, setView] = useState("landing");   // ← YENİ: "landing" | "login" | "setup"
 
   const handleLogin = s => {
     setSession(s);
@@ -768,11 +769,19 @@ export default function App() {
 
   const handleLogout = () => {
     setSession(null);
+    setView("landing");                            // ← çıkışta landing'e dön
     try { localStorage.removeItem("okul_session"); } catch {}
   };
 
-  if (showSetup) return <SchoolSetup onDone={() => setShowSetup(false)} />;
-  if (!session) return <LoginScreen onLogin={handleLogin} onSetup={() => setShowSetup(true)} />;
-  if (session.role === "teacher") return <TeacherPanel session={session} onLogout={handleLogout} />;
-  return <AdminPanel session={session} onLogout={handleLogout} />;
+  // Giriş yapılmışsa direkt panele git (landing'i atla)
+  if (session) {
+    if (session.role === "teacher") return <TeacherPanel session={session} onLogout={handleLogout} />;
+    return <AdminPanel session={session} onLogout={handleLogout} />;
+  }
+
+  // Giriş yapılmamışsa: landing / login / setup arasında geçiş
+  if (view === "setup") return <SchoolSetup onDone={() => setView("login")} />;
+  if (view === "login") return <LoginScreen onLogin={handleLogin} onSetup={() => setView("setup")} />;
+  return <Landing onLogin={() => setView("login")} onSetup={() => setView("setup")} />;
 }
+----------------------------------------------
