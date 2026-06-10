@@ -784,4 +784,3 @@ export default function App() {
   if (view === "login") return <LoginScreen onLogin={handleLogin} onSetup={() => setView("setup")} />;
   return <Landing onLogin={() => setView("login")} onSetup={() => setView("setup")} />;
 }
-----------------------------------------------
