@@ -165,12 +165,12 @@ function LoginScreen({ onLogin, onSetup, onBack }) {
 
 // ─── OKUL KAYIT ───────────────────────────────────────────────
 function SchoolSetup({ onDone, onBack }) {
-  const [form, setForm] = useState({ schoolCode:"", schoolName:"", city:"", adminName:"" });
+  const [form, setForm] = useState({ schoolCode:"", schoolName:"", city:"", adminName:"", adminPassword:"" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const set = (k,v) => setForm(f=>({...f,[k]:v}));
-  const ok = form.schoolCode && form.schoolName && form.city && form.adminName;
+  const ok = form.schoolCode && form.schoolName && form.city && form.adminName && form.adminPassword.length>=4;
 
   const handleSetup = async () => {
     if (!ok||loading) return;
@@ -180,7 +180,7 @@ function SchoolSetup({ onDone, onBack }) {
       if (existing) { setError("Bu kurum kodu zaten kayıtlı."); setLoading(false); return; }
       await dbSet(`schools/${form.schoolCode}`, {
         name: form.schoolName, city: form.city, createdAt: new Date().toISOString(),
-        users: { admin1: { username:"mudur", password:"okul1234", role:"admin", name:form.adminName, title:"Okul Müdürü" } },
+        users: { admin1: { username:"mudur", password:form.adminPassword, role:"admin", name:form.adminName, title:"Okul Müdürü" } },
         categories: {
           evrak:  { title:"Evrak Teslimi",            icon:"📂", color:"#4f8ef7", order:1 },
           onemli: { title:"Önemli Günler ve Haftalar", icon:"🏅", color:"#f97316", order:2 },
@@ -204,7 +204,7 @@ function SchoolSetup({ onDone, onBack }) {
           <div style={{ fontSize:12, color:C.textMuted, marginBottom:8 }}>GİRİŞ BİLGİLERİNİZ</div>
           <div style={{ fontSize:14, color:C.text }}>Kurum Kodu: <strong style={{ color:C.accent }}>{form.schoolCode}</strong></div>
           <div style={{ fontSize:14, color:C.text, marginTop:4 }}>Kullanıcı: <strong style={{ color:C.accent }}>mudur</strong></div>
-          <div style={{ fontSize:14, color:C.text, marginTop:4 }}>Şifre: <strong style={{ color:C.accent }}>okul1234</strong></div>
+          <div style={{ fontSize:14, color:C.text, marginTop:4 }}>Şifre: <strong style={{ color:C.accent }}>belirlediğiniz şifre</strong></div>
         </div>
         <button onClick={onDone} style={{ width:"100%", background:`linear-gradient(135deg,${C.accent},#7c3aed)`, border:"none", color:"#fff", borderRadius:12, padding:13, fontSize:15, fontWeight:700, cursor:"pointer" }}>Giriş Yap →</button>
       </div>
@@ -222,6 +222,7 @@ function SchoolSetup({ onDone, onBack }) {
           <div><label style={lbl}>Okul Adı</label><input value={form.schoolName} onChange={e=>set("schoolName",e.target.value)} placeholder="Atatürk İlkokulu" style={inp} /></div>
           <div><label style={lbl}>İl / İlçe</label><input value={form.city} onChange={e=>set("city",e.target.value)} placeholder="Bursa / Osmangazi" style={inp} /></div>
           <div><label style={lbl}>Müdür Adı Soyadı</label><input value={form.adminName} onChange={e=>set("adminName",e.target.value)} placeholder="Ahmet Yılmaz" style={inp} /></div>
+          <div><label style={lbl}>Yönetici Şifresi</label><input type="password" value={form.adminPassword} onChange={e=>set("adminPassword",e.target.value)} placeholder="En az 4 karakter" style={inp} /><div style={{ fontSize:11, color:C.textDim, marginTop:5 }}>Giriş kullanıcı adınız: <strong style={{color:C.textMuted}}>mudur</strong></div></div>
           {error && <div style={{ background:C.redSoft, border:`1px solid ${C.red}44`, borderRadius:10, padding:"9px 12px", fontSize:12, color:C.red }}>⚠ {error}</div>}
           <button onClick={handleSetup} disabled={!ok||loading} style={{ background:`linear-gradient(135deg,${C.accent},#7c3aed)`, border:"none", color:"#fff", borderRadius:12, padding:13, fontSize:15, fontWeight:700, cursor:ok?"pointer":"default", opacity:ok?1:0.5 }}>{loading?"Kaydediliyor...":"Okulu Kaydet →"}</button>
           <button onClick={onDone} style={{ background:"none", border:"none", color:C.textMuted, fontSize:13, cursor:"pointer", textDecoration:"underline" }}>Zaten kaydım var → Giriş yap</button>
@@ -264,6 +265,8 @@ function AdminPanel({ session, onLogout }) {
     .map(([id,cat]) => ({ id, ...cat, tasks: objToArr(cat.tasks||{}) })) : [];
   const allTasks = categories.flatMap(c => c.tasks);
   const currentCat = selCat ? categories.find(c=>c.id===selCat.id) : null;
+  const messages = data?.messages ? objToArr(data.messages).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)) : [];
+  const unreadCount = messages.filter(m=>!m.read).length;
 
   const findCat = tid => categories.find(c=>c.tasks.some(t=>t.id===tid));
 
@@ -304,7 +307,7 @@ function AdminPanel({ session, onLogout }) {
   const handleAddTeacher = async (form) => {
     const initials = form.name.split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2);
     const tid = await dbPush(`schools/${schoolCode}/teachers`, { ...form, avatar:initials });
-    await dbSet(`schools/${schoolCode}/users/${tid}`, { username:form.username, password:form.password, role:"teacher", name:form.name, teacherId:tid });
+    await dbSet(`schools/${schoolCode}/users/${tid}`, { username:form.username, password:form.password, role:"teacher", name:form.name, teacherId:tid, mustChangePassword:true });
     showToast(`${form.name} eklendi!`);
     setScreen("teachers");
     reload();
@@ -333,6 +336,17 @@ function AdminPanel({ session, onLogout }) {
     reload();
   };
 
+  const handleReadMessage = async (msgId) => {
+    await dbUpdate(`schools/${schoolCode}/messages/${msgId}`, { read: true });
+    reload();
+  };
+
+  const handleDelMessage = async (msgId) => {
+    await dbDelete(`schools/${schoolCode}/messages/${msgId}`);
+    showToast("Mesaj silindi.", C.red);
+    reload();
+  };
+
   if (loading) return <div style={{ background:C.bg, minHeight:"100vh" }}><Spinner /></div>;
 
   const tabs = [
@@ -349,6 +363,7 @@ function AdminPanel({ session, onLogout }) {
           <div><div style={{ fontSize:13, fontWeight:800, color:C.text }}>{school.name}</div><div style={{ fontSize:10, color:C.textMuted }}>{user.title} · {schoolCode}</div></div>
         </div>
         <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+          <button onClick={()=>setScreen("messages")} style={{ position:"relative", background:C.surface, border:`1px solid ${C.border}`, borderRadius:8, padding:"4px 9px", fontSize:14, cursor:"pointer" }}>✉{unreadCount>0 && <span style={{ position:"absolute", top:-6, right:-6, background:C.red, color:"#fff", borderRadius:10, fontSize:9, fontWeight:700, minWidth:16, height:16, display:"flex", alignItems:"center", justifyContent:"center", padding:"0 3px" }}>{unreadCount}</span>}</button>
           {allTasks.filter(t=>t.status==="gecikmiş").length>0 && <div style={{ background:C.redSoft, border:`1px solid ${C.red}44`, borderRadius:20, padding:"3px 9px", fontSize:10, color:C.red, fontWeight:700 }}>🔔 {allTasks.filter(t=>t.status==="gecikmiş").length} Gecikmiş</div>}
           <button onClick={onLogout} style={{ background:C.surface, border:`1px solid ${C.border}`, color:C.textMuted, borderRadius:8, padding:"4px 10px", fontSize:11, cursor:"pointer" }}>Çıkış</button>
         </div>
@@ -364,6 +379,7 @@ function AdminPanel({ session, onLogout }) {
         {screen==="teachers"      && <TeacherList teachers={teachers} allTasks={allTasks} onSel={t=>{setSelTeacher(t);setScreen("teacherDetail");}} onNav={setScreen} />}
         {screen==="addTeacher"    && <AddTeacher onAdd={handleAddTeacher} onBack={()=>setScreen("teachers")} />}
         {screen==="teacherDetail" && selTeacher  && <TeacherDetail teacher={selTeacher} cats={categories} onBack={()=>setScreen("teachers")} onNav={setScreen} onTask={t=>{setSelTask(t);setScreen("taskDetail");}} onDel={handleDelTeacher} />}
+        {screen==="messages"      && <MessagesScreen messages={messages} onBack={()=>setScreen("dashboard")} onRead={handleReadMessage} onDel={handleDelMessage} />}
       </div>
 
       {toast && <div style={{ position:"fixed", bottom:80, left:"50%", transform:"translateX(-50%)", background:toast.color, color:"#fff", borderRadius:12, padding:"10px 18px", fontSize:13, fontWeight:600, boxShadow:"0 4px 20px rgba(0,0,0,0.4)", zIndex:100, whiteSpace:"nowrap" }}>{toast.msg}</div>}
@@ -632,8 +648,9 @@ function AddTeacher({ onAdd, onBack }) {
           <div style={{ fontSize:12, fontWeight:700, color:C.textMuted, marginBottom:12 }}>GİRİŞ BİLGİLERİ</div>
           <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
             <div><label style={lbl}>Kullanıcı Adı</label><input value={form.username} onChange={e=>set("username",e.target.value)} placeholder="ayse.kaya" style={inp}/></div>
-            <div><label style={lbl}>Şifre</label><input value={form.password} onChange={e=>set("password",e.target.value)} placeholder="Şifre belirleyin" style={inp}/></div>
+            <div><label style={lbl}>Başlangıç Şifresi</label><input value={form.password} onChange={e=>set("password",e.target.value)} placeholder="Geçici şifre belirleyin" style={inp}/></div>
           </div>
+          <div style={{ fontSize:11, color:C.textDim, marginTop:10 }}>ℹ Öğretmen ilk girişte bu şifreyle giriş yapıp kendi şifresini belirleyecek.</div>
         </div>
         <button onClick={async()=>{if(!ok||saving)return;setSaving(true);await onAdd(form);setSaving(false);}} style={{ background:C.accent, border:"none", color:"#fff", borderRadius:14, padding:"14px 0", fontSize:15, fontWeight:700, cursor:ok?"pointer":"default", opacity:ok?1:0.4 }}>{saving?"Ekleniyor...":"Öğretmeni Ekle"}</button>
       </div>
@@ -666,19 +683,101 @@ function TeacherDetail({ teacher, cats, onBack, onNav, onTask, onDel }) {
 }
 
 // ─── ÖĞRETMEN PANELİ ─────────────────────────────────────────
+function MessagesScreen({ messages, onBack, onRead, onDel }) {
+  const fmtMsgTime = (iso) => {
+    try {
+      const d = new Date(iso);
+      return d.toLocaleDateString("tr-TR",{day:"numeric",month:"long"}) + " · " + d.toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"});
+    } catch { return ""; }
+  };
+  return (
+    <div style={{ padding:"0 16px 24px" }}>
+      <button onClick={onBack} style={{ background:"none", border:"none", color:C.accent, fontSize:14, cursor:"pointer", marginBottom:16, padding:0, fontWeight:600 }}>← Geri</button>
+      <div style={{ fontSize:20, fontWeight:800, color:C.text, marginBottom:6 }}>Öğretmen Mesajları</div>
+      <div style={{ fontSize:13, color:C.textMuted, marginBottom:20 }}>Toplam {messages.length} mesaj</div>
+      {messages.length===0 ? (
+        <div style={{ textAlign:"center", padding:48, color:C.textMuted }}><div style={{ fontSize:40, marginBottom:12 }}>📭</div><div style={{ fontSize:15, fontWeight:700 }}>Henüz mesaj yok</div><div style={{ fontSize:13, marginTop:6 }}>Öğretmenleriniz mesaj gönderdiğinde burada görünür.</div></div>
+      ) : (
+        <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+          {messages.map(m=>(
+            <div key={m.id} style={{ background:C.card, border:`1px solid ${m.read?C.border:C.accent+"55"}`, borderRadius:14, padding:"14px 16px", position:"relative" }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                  <span style={{ fontSize:14, fontWeight:800, color:C.text }}>{m.teacherName}</span>
+                  {!m.read && <span style={{ background:C.accent, color:"#fff", borderRadius:10, fontSize:9, fontWeight:700, padding:"2px 7px" }}>YENİ</span>}
+                </div>
+                <span style={{ fontSize:11, color:C.textDim }}>{fmtMsgTime(m.createdAt)}</span>
+              </div>
+              <div style={{ fontSize:14, color:C.textMuted, lineHeight:1.6, whiteSpace:"pre-wrap" }}>{m.text}</div>
+              <div style={{ display:"flex", gap:8, marginTop:12 }}>
+                {!m.read && <button onClick={()=>onRead(m.id)} style={{ flex:1, background:C.surface, border:`1px solid ${C.border}`, color:C.accent, borderRadius:9, padding:8, fontSize:12, fontWeight:700, cursor:"pointer" }}>Okundu işaretle</button>}
+                <button onClick={()=>onDel(m.id)} style={{ flex:m.read?1:"none", background:C.redSoft, border:`1px solid ${C.red}33`, color:C.red, borderRadius:9, padding:"8px 14px", fontSize:12, fontWeight:700, cursor:"pointer" }}>Sil</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── ÖĞRETMEN PANELİ ─────────────────────────────────────────
 function TeacherPanel({ session, onLogout }) {
   const { user, schoolCode, school } = session;
+  const tid = user.teacherId || user.id;
   const [screen, setScreen] = useState("myTasks");
   const [cats, setCats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selTask, setSelTask] = useState(null);
+  const [mustChange, setMustChange] = useState(!!user.mustChangePassword);
+  const [toast, setToast] = useState(null);
+
+  const showToast = (msg, color=C.green) => { setToast({msg,color}); setTimeout(()=>setToast(null),2500); };
+
+  // Şifre değiştirme
+  const [np1, setNp1] = useState("");
+  const [np2, setNp2] = useState("");
+  const [pwErr, setPwErr] = useState("");
+  const [pwSaving, setPwSaving] = useState(false);
+  const handleChangePassword = async () => {
+    setPwErr("");
+    if (np1.length < 4) { setPwErr("Şifre en az 4 karakter olmalı."); return; }
+    if (np1 !== np2) { setPwErr("Şifreler eşleşmiyor."); return; }
+    setPwSaving(true);
+    try {
+      await dbUpdate(`schools/${schoolCode}/users/${tid}`, { password: np1, mustChangePassword: false });
+      session.user.mustChangePassword = false;
+      setMustChange(false);
+      setNp1(""); setNp2("");
+      showToast("Şifreniz güncellendi 🔒");
+      setScreen("myTasks");
+    } catch(e) { setPwErr("Hata: " + e.message); }
+    setPwSaving(false);
+  };
+
+  // Yönetime mesaj
+  const [msgText, setMsgText] = useState("");
+  const [msgSaving, setMsgSaving] = useState(false);
+  const handleSendMessage = async () => {
+    if (!msgText.trim() || msgSaving) return;
+    setMsgSaving(true);
+    try {
+      await dbPush(`schools/${schoolCode}/messages`, {
+        teacherId: tid, teacherName: user.name,
+        text: msgText.trim(), createdAt: new Date().toISOString(), read: false,
+      });
+      setMsgText("");
+      showToast("Mesajınız yönetime iletildi ✉");
+      setScreen("myTasks");
+    } catch(e) { showToast("Mesaj gönderilemedi: " + e.message, C.red); }
+    setMsgSaving(false);
+  };
 
   useEffect(() => {
     const load = async () => {
       try {
         const data = await dbGet(`schools/${schoolCode}/categories`);
         if (!data) { setLoading(false); return; }
-        const tid = user.teacherId || user.id;
         const list = Object.entries(data).map(([id,cat]) => ({
           id, ...cat,
           tasks: objToArr(cat.tasks||{}).filter(t=>(t.teacherIds||[]).includes(tid))
@@ -690,7 +789,6 @@ function TeacherPanel({ session, onLogout }) {
     load();
     const unsub = dbListen(`schools/${schoolCode}/categories`, data => {
       if (!data) return;
-      const tid = user.teacherId || user.id;
       const list = Object.entries(data).map(([id,cat]) => ({
         id, ...cat,
         tasks: objToArr(cat.tasks||{}).filter(t=>(t.teacherIds||[]).includes(tid))
@@ -705,6 +803,27 @@ function TeacherPanel({ session, onLogout }) {
   const done = all.filter(t=>t.status==="tamamlandı");
 
   if (loading) return <div style={{ background:C.bg, minHeight:"100vh" }}><Spinner/></div>;
+
+  const pwInp = { width:"100%", background:"#1e2335", border:`1.5px solid ${C.border}`, borderRadius:12, padding:"13px 16px", color:C.text, fontSize:15, outline:"none", boxSizing:"border-box" };
+
+  // İlk girişte şifre değiştirme zorunlu
+  if (mustChange) return (
+    <div style={{ minHeight:"100vh", background:C.bg, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:24 }}>
+      <div style={{ marginBottom:24, textAlign:"center" }}>
+        <div style={{ width:64, height:64, borderRadius:18, background:`linear-gradient(135deg,${C.accent},#7c3aed)`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:30, margin:"0 auto 14px" }}>🔒</div>
+        <div style={{ fontSize:20, fontWeight:900, color:C.text }}>Şifrenizi Belirleyin</div>
+        <div style={{ fontSize:13, color:C.textMuted, marginTop:6, maxWidth:300 }}>Güvenliğiniz için ilk girişte kendi şifrenizi oluşturmanız gerekiyor.</div>
+      </div>
+      <div style={{ width:"100%", maxWidth:340, background:C.card, borderRadius:22, padding:24, border:`1px solid ${C.border}`, display:"flex", flexDirection:"column", gap:12 }}>
+        <div><label style={{ fontSize:12, color:C.textMuted, marginBottom:6, fontWeight:600, display:"block" }}>Yeni Şifre</label><input type="password" value={np1} onChange={e=>setNp1(e.target.value)} placeholder="En az 4 karakter" style={pwInp} /></div>
+        <div><label style={{ fontSize:12, color:C.textMuted, marginBottom:6, fontWeight:600, display:"block" }}>Yeni Şifre (Tekrar)</label><input type="password" value={np2} onChange={e=>setNp2(e.target.value)} placeholder="Şifreyi tekrar girin" style={pwInp} /></div>
+        {pwErr && <div style={{ background:C.redSoft, border:`1px solid ${C.red}44`, borderRadius:10, padding:"9px 12px", fontSize:12, color:C.red }}>⚠ {pwErr}</div>}
+        <button onClick={handleChangePassword} disabled={pwSaving} style={{ background:`linear-gradient(135deg,${C.accent},#7c3aed)`, border:"none", color:"#fff", borderRadius:12, padding:13, fontSize:15, fontWeight:700, cursor:"pointer" }}>{pwSaving?"Kaydediliyor...":"Şifremi Belirle →"}</button>
+        <button onClick={onLogout} style={{ background:"none", border:"none", color:C.textMuted, fontSize:13, cursor:"pointer" }}>Çıkış yap</button>
+      </div>
+      {toast && <div style={{ position:"fixed", bottom:40, left:"50%", transform:"translateX(-50%)", background:toast.color, color:"#fff", borderRadius:12, padding:"10px 18px", fontSize:13, fontWeight:600, zIndex:100 }}>{toast.msg}</div>}
+    </div>
+  );
 
   return (
     <div style={{ maxWidth:390, margin:"0 auto", background:C.bg, minHeight:"100vh", fontFamily:"'Segoe UI',system-ui,sans-serif", color:C.text }}>
@@ -749,9 +868,50 @@ function TeacherPanel({ session, onLogout }) {
             </div>
           </div>
         )}
+
+        {/* MESAJ GÖNDER */}
+        {screen==="message"&&(
+          <div style={{ padding:"0 16px 24px" }}>
+            <div style={{ fontSize:20, fontWeight:800, color:C.text, marginBottom:6 }}>Yönetime Mesaj</div>
+            <div style={{ fontSize:13, color:C.textMuted, marginBottom:20 }}>Okul idaresine bir mesaj iletin</div>
+            <div style={{ background:C.card, borderRadius:18, padding:18, border:`1px solid ${C.border}` }}>
+              <textarea value={msgText} onChange={e=>setMsgText(e.target.value)} placeholder="Mesajınızı yazın... (örn. bir görevle ilgili soru, izin talebi, bilgilendirme)" rows={6} style={{ width:"100%", background:"#1e2335", border:`1.5px solid ${C.border}`, borderRadius:12, padding:"13px 16px", color:C.text, fontSize:14, outline:"none", boxSizing:"border-box", resize:"vertical", fontFamily:"inherit", lineHeight:1.6 }} />
+              <button onClick={handleSendMessage} disabled={!msgText.trim()||msgSaving} style={{ width:"100%", marginTop:12, background:`linear-gradient(135deg,${C.accent},#7c3aed)`, border:"none", color:"#fff", borderRadius:12, padding:13, fontSize:15, fontWeight:700, cursor:msgText.trim()?"pointer":"default", opacity:msgText.trim()?1:0.5 }}>{msgSaving?"Gönderiliyor...":"Mesajı Gönder ✉"}</button>
+            </div>
+            <div style={{ fontSize:12, color:C.textDim, marginTop:14, textAlign:"center" }}>Mesajınız okul müdürünün panelinde görünür.</div>
+          </div>
+        )}
+
+        {/* PROFİL */}
+        {screen==="profile"&&(
+          <div style={{ padding:"0 16px 24px" }}>
+            <div style={{ fontSize:20, fontWeight:800, color:C.text, marginBottom:20 }}>Profilim</div>
+            <div style={{ background:C.card, borderRadius:18, padding:20, border:`1px solid ${C.border}`, marginBottom:16, display:"flex", alignItems:"center", gap:14 }}>
+              <Avatar initials={user.name?.split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2)||"?"} size={56} idx={0}/>
+              <div><div style={{ fontSize:18, fontWeight:800, color:C.text }}>{user.name}</div><div style={{ fontSize:13, color:C.textMuted }}>{school.name}</div><div style={{ fontSize:12, color:C.textDim, marginTop:3 }}>👤 {user.username}</div></div>
+            </div>
+            <div style={{ background:C.card, borderRadius:18, padding:18, border:`1px solid ${C.border}` }}>
+              <div style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:4 }}>🔒 Şifre Değiştir</div>
+              <div style={{ fontSize:12, color:C.textMuted, marginBottom:14 }}>Hesap güvenliğiniz için şifrenizi güncelleyebilirsiniz.</div>
+              <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                <div><label style={{ fontSize:12, color:C.textMuted, marginBottom:6, fontWeight:600, display:"block" }}>Yeni Şifre</label><input type="password" value={np1} onChange={e=>setNp1(e.target.value)} placeholder="En az 4 karakter" style={pwInp} /></div>
+                <div><label style={{ fontSize:12, color:C.textMuted, marginBottom:6, fontWeight:600, display:"block" }}>Yeni Şifre (Tekrar)</label><input type="password" value={np2} onChange={e=>setNp2(e.target.value)} placeholder="Şifreyi tekrar girin" style={pwInp} /></div>
+                {pwErr && <div style={{ background:C.redSoft, border:`1px solid ${C.red}44`, borderRadius:10, padding:"9px 12px", fontSize:12, color:C.red }}>⚠ {pwErr}</div>}
+                <button onClick={handleChangePassword} disabled={pwSaving} style={{ background:`linear-gradient(135deg,${C.accent},#7c3aed)`, border:"none", color:"#fff", borderRadius:12, padding:12, fontSize:14, fontWeight:700, cursor:"pointer" }}>{pwSaving?"Kaydediliyor...":"Şifreyi Güncelle"}</button>
+              </div>
+            </div>
+            <button onClick={onLogout} style={{ width:"100%", marginTop:16, background:C.redSoft, border:`1px solid ${C.red}33`, color:C.red, borderRadius:12, padding:12, fontSize:14, fontWeight:700, cursor:"pointer" }}>Çıkış Yap</button>
+          </div>
+        )}
       </div>
+
+      {toast && <div style={{ position:"fixed", bottom:80, left:"50%", transform:"translateX(-50%)", background:toast.color, color:"#fff", borderRadius:12, padding:"10px 18px", fontSize:13, fontWeight:600, boxShadow:"0 4px 20px rgba(0,0,0,0.4)", zIndex:100, whiteSpace:"nowrap" }}>{toast.msg}</div>}
+
       <div style={{ position:"fixed", bottom:0, left:"50%", transform:"translateX(-50%)", width:"100%", maxWidth:390, background:C.surface, borderTop:`1px solid ${C.border}`, display:"flex" }}>
-        <button style={{ flex:1, background:"none", border:"none", padding:"10px 0 12px", display:"flex", flexDirection:"column", alignItems:"center", gap:3 }}><span style={{ fontSize:20 }}>📋</span><span style={{ fontSize:10, color:C.accent, fontWeight:700 }}>Görevlerim</span></button>
+        {[{id:"myTasks",icon:"📋",label:"Görevlerim"},{id:"message",icon:"✉",label:"Mesaj"},{id:"profile",icon:"👤",label:"Profil"}].map(tab=>{
+          const active = screen===tab.id || (tab.id==="myTasks"&&screen==="taskView");
+          return <button key={tab.id} onClick={()=>setScreen(tab.id)} style={{ flex:1, background:"none", border:"none", padding:"10px 0 12px", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:3 }}><span style={{ fontSize:20, filter:active?"none":"grayscale(1) opacity(0.5)" }}>{tab.icon}</span><span style={{ fontSize:10, color:active?C.accent:C.textDim, fontWeight:active?700:400 }}>{tab.label}</span></button>;
+        })}
       </div>
     </div>
   );
