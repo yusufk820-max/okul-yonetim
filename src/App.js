@@ -83,7 +83,7 @@ function ReminderPicker({ dueDate, value=[], onChange }) {
 }
 
 // ─── GİRİŞ ───────────────────────────────────────────────────
-function LoginScreen({ onLogin, onSetup }) {
+function LoginScreen({ onLogin, onSetup, onBack }) {
   const [step, setStep] = useState("code");
   const [code, setCode] = useState("");
   const [username, setUsername] = useState("");
@@ -122,7 +122,8 @@ function LoginScreen({ onLogin, onSetup }) {
   const inp = { width:"100%", background:"#1e2335", border:`1.5px solid ${C.border}`, borderRadius:12, padding:"13px 16px", color:C.text, fontSize:15, outline:"none", boxSizing:"border-box" };
 
   return (
-    <div style={{ minHeight:"100vh", background:C.bg, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:24 }}>
+    <div style={{ minHeight:"100vh", background:C.bg, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:24, position:"relative" }}>
+      {onBack && <button onClick={onBack} style={{ position:"absolute", top:20, left:20, background:"none", border:"none", color:C.textMuted, fontSize:14, fontWeight:700, cursor:"pointer" }}>← Ana Sayfa</button>}
       <div style={{ marginBottom:32, textAlign:"center" }}>
         <div style={{ width:72, height:72, borderRadius:22, background:`linear-gradient(135deg,${C.accent},#7c3aed)`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:36, margin:"0 auto 14px" }}>🏫</div>
         <div style={{ fontSize:22, fontWeight:900, color:C.text }}>Okul Yönetim</div>
@@ -163,7 +164,7 @@ function LoginScreen({ onLogin, onSetup }) {
 }
 
 // ─── OKUL KAYIT ───────────────────────────────────────────────
-function SchoolSetup({ onDone }) {
+function SchoolSetup({ onDone, onBack }) {
   const [form, setForm] = useState({ schoolCode:"", schoolName:"", city:"", adminName:"" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -211,7 +212,8 @@ function SchoolSetup({ onDone }) {
   );
 
   return (
-    <div style={{ minHeight:"100vh", background:C.bg, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:24 }}>
+    <div style={{ minHeight:"100vh", background:C.bg, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:24, position:"relative" }}>
+      {onBack && <button onClick={onBack} style={{ position:"absolute", top:20, left:20, background:"none", border:"none", color:C.textMuted, fontSize:14, fontWeight:700, cursor:"pointer" }}>← Ana Sayfa</button>}
       <div style={{ fontSize:20, fontWeight:900, color:C.text, marginBottom:4 }}>Yeni Okul Kaydı</div>
       <div style={{ fontSize:13, color:C.textMuted, marginBottom:24 }}>Okulunuzu sisteme ekleyin</div>
       <div style={{ width:"100%", maxWidth:340, background:C.card, borderRadius:22, padding:24, border:`1px solid ${C.border}` }}>
@@ -222,7 +224,7 @@ function SchoolSetup({ onDone }) {
           <div><label style={lbl}>Müdür Adı Soyadı</label><input value={form.adminName} onChange={e=>set("adminName",e.target.value)} placeholder="Ahmet Yılmaz" style={inp} /></div>
           {error && <div style={{ background:C.redSoft, border:`1px solid ${C.red}44`, borderRadius:10, padding:"9px 12px", fontSize:12, color:C.red }}>⚠ {error}</div>}
           <button onClick={handleSetup} disabled={!ok||loading} style={{ background:`linear-gradient(135deg,${C.accent},#7c3aed)`, border:"none", color:"#fff", borderRadius:12, padding:13, fontSize:15, fontWeight:700, cursor:ok?"pointer":"default", opacity:ok?1:0.5 }}>{loading?"Kaydediliyor...":"Okulu Kaydet →"}</button>
-          <button onClick={onDone} style={{ background:"none", border:"none", color:C.textMuted, fontSize:13, cursor:"pointer", textDecoration:"underline" }}>← Geri dön</button>
+          <button onClick={onDone} style={{ background:"none", border:"none", color:C.textMuted, fontSize:13, cursor:"pointer", textDecoration:"underline" }}>Zaten kaydım var → Giriş yap</button>
         </div>
       </div>
     </div>
@@ -780,7 +782,7 @@ export default function App() {
   }
 
   // Giriş yapılmamışsa: landing / login / setup arasında geçiş
-  if (view === "setup") return <SchoolSetup onDone={() => setView("login")} />;
-  if (view === "login") return <LoginScreen onLogin={handleLogin} onSetup={() => setView("setup")} />;
+  if (view === "setup") return <SchoolSetup onDone={() => setView("login")} onBack={() => setView("landing")} />;
+  if (view === "login") return <LoginScreen onLogin={handleLogin} onSetup={() => setView("setup")} onBack={() => setView("landing")} />;
   return <Landing onLogin={() => setView("login")} onSetup={() => setView("setup")} />;
 }
