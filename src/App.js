@@ -699,7 +699,7 @@ function PlanScreen({ school, teachers, categories, allTasks, onBack, onDowngrad
               <div style={{ fontSize:11, color:C.yellow, marginTop:8, lineHeight:1.5 }}>ℹ {ODEME.aciklama}</div>
             </div>
 
-            <div style={{ fontSize:12, color:C.textMuted, lineHeight:1.6, marginBottom:18 }}>Ödemenizi yaptıktan sonra "Talep Oluştur" butonuna basın. Ödemeniz kontrol edildikten sonra (genellikle 1 iş günü) planınız otomatik aktifleşir. Sorularınız için: <strong style={{color:C.accent}}>{ODEME.iletisim}</strong></div>
+            <div style={{ fontSize:12, color:C.textMuted, lineHeight:1.6, marginBottom:14 }}>Ödemenizi yaptıktan sonra <strong style={{color:C.text}}>"Talep Oluştur"</strong> butonuna basın. Ardından dekontunuzu, <strong style={{color:C.accent}}>okul kurum kodunuzu</strong> belirterek <strong style={{color:C.accent}}>{ODEME.iletisim}</strong> adresine gönderin. Ödemeniz onaylandığında (genellikle 1 iş günü) planınız otomatik aktifleşir.</div>
 
             <div style={{ display:"flex", gap:10 }}>
               <button onClick={()=>setReqPlan(null)} style={{ flex:1, background:C.surface, border:`1px solid ${C.border}`, color:C.textMuted, borderRadius:10, padding:11, fontSize:13, cursor:"pointer" }}>Kapat</button>
