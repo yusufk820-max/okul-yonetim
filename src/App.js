@@ -1393,6 +1393,38 @@ export default function App() {
   // Device Type Detection (768px = mobil/tablet sınırı)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
+  // Language State
+  const [language, setLanguage] = useState(() => {
+    try { return localStorage.getItem("taskipro_lang") || "tr"; } catch { return "tr"; }
+  });
+
+  // Translation helper
+  const t = (key) => {
+    const keys = key.split(".");
+    const translations = {
+      tr: {
+        landing: { title: "TaskiPro", subtitle: "Okul Görev Yönetim Sistemi", schoolButton: "Okul Girişi", getStarted: "Başla" },
+        auth: { schoolCode: "Okul Kodu", username: "Kullanıcı Adı", password: "Şifre", login: "Giriş Yap", selectRole: "Rol Seçin" },
+        dashboard: { overview: "Genel Bakış", tasks: "Görevler", teachers: "Öğretmenler", messages: "Mesajlar", profile: "Profil", logout: "Çıkış Yap" },
+        common: { save: "Kaydet", logout: "Çıkış Yap" }
+      },
+      en: {
+        landing: { title: "TaskiPro", subtitle: "School Task Management System", schoolButton: "School Login", getStarted: "Get Started" },
+        auth: { schoolCode: "School Code", username: "Username", password: "Password", login: "Login", selectRole: "Select Role" },
+        dashboard: { overview: "Overview", tasks: "Tasks", teachers: "Teachers", messages: "Messages", profile: "Profile", logout: "Logout" },
+        common: { save: "Save", logout: "Logout" }
+      }
+    };
+    let obj = translations[language];
+    for (let k of keys) obj = obj[k] || key;
+    return obj;
+  };
+
+  const handleLanguage = (lang) => {
+    setLanguage(lang);
+    localStorage.setItem("taskipro_lang", lang);
+  };
+
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
@@ -1477,9 +1509,18 @@ export default function App() {
 
   // ─── LANDING SAYFASI ───────────────────────────
   return (
-    <Landing
-      onLogin={() => setView(isMobile ? "login" : "roleSelect")}
-      onSetup={() => setView("setup")}
-    />
+    <>
+      {/* Floating Language Button */}
+      <div style={{ position: "fixed", top: 16, right: 16, zIndex: 1000, display: "flex", gap: 8 }}>
+        <button onClick={() => handleLanguage("tr")} style={{ padding: "8px 14px", borderRadius: 8, border: language === "tr" ? `2px solid ${C.accent}` : `1px solid ${C.border}`, background: language === "tr" ? C.accentSoft : C.card, color: language === "tr" ? C.accent : C.text, fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }}>🇹🇷 TR</button>
+        <button onClick={() => handleLanguage("en")} style={{ padding: "8px 14px", borderRadius: 8, border: language === "en" ? `2px solid ${C.accent}` : `1px solid ${C.border}`, background: language === "en" ? C.accentSoft : C.card, color: language === "en" ? C.accent : C.text, fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }}>🇬🇧 EN</button>
+      </div>
+      
+      <Landing
+        onLogin={() => setView(isMobile ? "login" : "roleSelect")}
+        onSetup={() => setView("setup")}
+        language={language}
+      />
+    </>
   );
 }
