@@ -1503,8 +1503,9 @@ export default function App() {
     return <LoginScreen onLogin={handleLogin} onSetup={() => setView("setup")} onBack={() => setView("landing")} />;
   }
 
-  if (isMobile && view === "setup") {
-    return <SchoolSetup onDone={() => setView("login")} onBack={() => setView("landing")} />;
+  // ─── OKUL KAYDI (MOBİL + DESKTOP) ───────────────────────────
+  if (view === "setup") {
+    return <SchoolSetup onDone={() => setView(isMobile ? "login" : "roleSelect")} onBack={() => setView("landing")} />;
   }
 
   // ─── LANDING SAYFASI ───────────────────────────
