@@ -515,6 +515,7 @@ function Dashboard({ cats, teachers, allTasks, school, onNav, onTask, onCat }) {
 
 // ─── PERFORMANS RAPORU (Okul+) ───────────────────────────────
 function ReportScreen({ teachers, allTasks, school, onBack, onUpgrade }) {
+  const [selTerm, setSelTerm] = useState("all");
   const izinli = planOf(school).rapor;
 
   // Mevcut dönemleri görevlerin tarihlerinden çıkar
@@ -524,7 +525,6 @@ function ReportScreen({ teachers, allTasks, school, onBack, onUpgrade }) {
     if (term) termsMap[term.key] = term;
   }
   const terms = Object.values(termsMap).sort((a,b)=> b.sortYear-a.sortYear || a.sortHalf-b.sortHalf);
-  const [selTerm, setSelTerm] = useState("all");
 
   if (!izinli) return (
     <div style={{ padding:"0 16px 24px" }}>
