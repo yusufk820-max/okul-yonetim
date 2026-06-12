@@ -5,44 +5,138 @@ export default function Landing({ onLogin, onSetup, language = "tr", onLanguageC
   const [modal, setModal] = useState(null); // "iletisim" | "yardim" | null
   const starsRef = useRef(null);
 
+
   // Translation Helper
   const t = (key) => {
     const translations = {
       tr: {
+        // NAV
         nasil: "Nasıl Çalışır",
         ozellikler: "Özellikler",
         fiyat: "Fiyat",
         sss: "SSS",
         kurumGirisi: "Kurum Girişi",
         okulKaydi: "Okul Kaydı",
+        
+        // HERO
         hero1: "Okulunuzun tüm görevleri",
         hero2: "tek ekranda",
         heroDesc: "TaskiPro ile okul yönetimi artık çok kolay: görevleri kategorilere ayırın, öğretmenlere atayın, önemli gün ve haftaları takip edin. Müdürler planlar, ekip uygular.",
         heroBtn1: "Okulunuzu Ücretsiz Kaydedin",
         heroBtn2: "Nasıl Çalışır? →",
         heroNote: "Kurulum gerektirmez",
-        heroNote2: "Kurum koduyla saniyeler içinde giriş"
+        heroNote2: "Kurum koduyla saniyeler içinde giriş",
+        
+        // FEATURES
+        feature1Title: "3 adımda okulunuz hazır",
+        feature1Desc: "Başlayın, öğretmen ekleyin, görev verin. Hepsi bu kadar.",
+        feature2Title: "Görev Takip Sistemi",
+        feature2Desc: "Bekliyor, tamamlandı, gecikmiş — her görevin durumu renkli kartlarla anında görünür.",
+        feature3Title: "Önemli Gün Hatırlatıcı",
+        feature3Desc: "23 Nisan, 19 Mayıs, yıl sonu törenleri... Belirli gün ve haftalara kalan süre otomatik takip edilir.",
+        feature4Title: "Gecikme Uyarısı",
+        feature4Desc: "Tamamlanmayan görevler otomatik uyarı oluşturur, hiçbir şey unutulmaz.",
+        
+        // PRICING
+        ucretSiz: "Ücretsiz",
+        baslangic: "Başlangıç Planı",
+        ucretSizBas: "2 dakikada kurulum, sonsuza kadar ücretsiz başlangıç planı.",
+        ogretmenSay: "10 öğretmene kadar",
+        kategoriGorev: "4 kategori, 25 aktif görev",
+        kurumKodu: "Kurum kodu ile giriş",
+        okulPlan: "Okul Planı",
+        aylık: "₺99/Ay",
+        ogretmen25: "25 öğretmene kadar",
+        sınırlıKategori: "Sınırsız kategori ve görev",
+        bildirim: "Öğretmene anlık bildirim 🔔",
+        ozet: "Gecikme uyarıları ve özet panosu",
+        destek: "E-posta desteği",
+        okulPlus: "Okul+ Planı",
+        aylık399: "₺399/Ay",
+        ogretmen100: "100+ öğretmen",
+        arşiv: "Geçmiş yıl arşivi",
+        raporlar: "Dönemlik raporlar (PDF)",
+        oncelikliDestek: "Öncelikli destek",
+        basla: "Ücretsiz Başla",
+        gecAl: "Okul Planına Geç",
+        
+        // FAQ
+        faqTitle: "Sık Sorulan Sorular",
+        faqDesc: "Merak ettiklerinizin yanıtlarını bulun",
+        
+        // FOOTER
+        iletisim: "İletişim",
+        yardimMerkezi: "Yardım Merkezi",
+        telif: "© 2026 TaskiPro",
+        haklar: "Tüm hakları saklıdır.",
+        mail: "info@taskipro.com"
       },
       en: {
+        // NAV
         nasil: "How It Works",
         ozellikler: "Features",
         fiyat: "Pricing",
         sss: "FAQ",
         kurumGirisi: "School Login",
         okulKaydi: "Register School",
+        
+        // HERO
         hero1: "All your school tasks",
         hero2: "on one screen",
-        heroDesc: "With TaskiPro, school management is now easy: organize tasks by category, assign to teachers, and track important days. Principals plan, teams execute.",
+        heroDesc: "With TaskiPro, school management is easy: organize tasks, assign to teachers, track important dates. Principals plan, teams execute.",
         heroBtn1: "Register Your School Free",
         heroBtn2: "How It Works? →",
         heroNote: "No setup required",
-        heroNote2: "Login in seconds with school code"
+        heroNote2: "Login in seconds with school code",
+        
+        // FEATURES
+        feature1Title: "Ready in 3 steps",
+        feature1Desc: "Start, add teachers, assign tasks. That's it.",
+        feature2Title: "Task Tracking System",
+        feature2Desc: "Pending, completed, overdue — every task status is visible with colored cards instantly.",
+        feature3Title: "Important Date Reminders",
+        feature3Desc: "National holidays, celebrations, year-end events — automatic tracking ensures nothing is forgotten.",
+        feature4Title: "Overdue Alerts",
+        feature4Desc: "Unfinished tasks automatically trigger alerts so nothing slips through.",
+        
+        // PRICING
+        ucretSiz: "Free",
+        baslangic: "Starter Plan",
+        ucretSizBas: "Setup in 2 minutes, free forever starter plan.",
+        ogretmenSay: "Up to 10 teachers",
+        kategoriGorev: "4 categories, 25 active tasks",
+        kurumKodu: "School code login",
+        okulPlan: "School Plan",
+        aylık: "₺99/Month",
+        ogretmen25: "Up to 25 teachers",
+        sınırlıKategori: "Unlimited categories and tasks",
+        bildirim: "Instant teacher notifications 🔔",
+        ozet: "Overdue alerts & summary dashboard",
+        destek: "Email support",
+        okulPlus: "School+ Plan",
+        aylık399: "₺399/Month",
+        ogretmen100: "100+ teachers",
+        arşiv: "Previous year archive",
+        raporlar: "Term reports (PDF)",
+        oncelikliDestek: "Priority support",
+        basla: "Get Started Free",
+        gecAl: "Upgrade to School Plan",
+        
+        // FAQ
+        faqTitle: "Frequently Asked Questions",
+        faqDesc: "Find answers to your questions",
+        
+        // FOOTER
+        iletisim: "Contact",
+        yardimMerkezi: "Help Center",
+        telif: "© 2026 TaskiPro",
+        haklar: "All rights reserved.",
+        mail: "info@taskipro.com"
       }
     };
     return translations[language]?.[key] || translations["tr"][key] || key;
   };
 
-  useEffect(() => {
     const c = starsRef.current;
     if (!c) return;
     const ctx = c.getContext("2d");
