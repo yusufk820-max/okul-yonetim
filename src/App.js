@@ -1509,18 +1509,11 @@ export default function App() {
 
   // ─── LANDING SAYFASI ───────────────────────────
   return (
-    <>
-      {/* Floating Language Button */}
-      <div style={{ position: "fixed", top: 16, right: 16, zIndex: 1000, display: "flex", gap: 8 }}>
-        <button onClick={() => handleLanguage("tr")} style={{ padding: "8px 14px", borderRadius: 8, border: language === "tr" ? `2px solid ${C.accent}` : `1px solid ${C.border}`, background: language === "tr" ? C.accentSoft : C.card, color: language === "tr" ? C.accent : C.text, fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }}>🇹🇷 TR</button>
-        <button onClick={() => handleLanguage("en")} style={{ padding: "8px 14px", borderRadius: 8, border: language === "en" ? `2px solid ${C.accent}` : `1px solid ${C.border}`, background: language === "en" ? C.accentSoft : C.card, color: language === "en" ? C.accent : C.text, fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }}>🇬🇧 EN</button>
-      </div>
-      
-      <Landing
-        onLogin={() => setView(isMobile ? "login" : "roleSelect")}
-        onSetup={() => setView("setup")}
-        language={language}
-      />
-    </>
+    <Landing
+      onLogin={() => setView(isMobile ? "login" : "roleSelect")}
+      onSetup={() => setView("setup")}
+      language={language}
+      onLanguageChange={handleLanguage}
+    />
   );
 }
