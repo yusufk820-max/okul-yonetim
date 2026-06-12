@@ -1130,7 +1130,7 @@ function MessagesScreen({ messages, onBack, onRead, onDel }) {
 }
 
 // ─── ÖĞRETMEN PANELİ ─────────────────────────────────────────
-function TeacherPanel({ session, onLogout }) {
+function TeacherPanel({ session, onLogout, isMobile }) {
   const { user, schoolCode, school } = session;
   const tid = user.teacherId || user.id;
   const [screen, setScreen] = useState("myTasks");
@@ -1234,15 +1234,29 @@ function TeacherPanel({ session, onLogout }) {
   );
 
   return (
-    <div style={{ maxWidth:390, margin:"0 auto", background:C.bg, minHeight:"100vh", fontFamily:"'Segoe UI',system-ui,sans-serif", color:C.text }}>
-      <div style={{ background:C.surface, borderBottom:`1px solid ${C.border}`, padding:"14px 18px 12px", display:"flex", justifyContent:"space-between", alignItems:"center", position:"sticky", top:0, zIndex:10 }}>
-        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-          <Avatar initials={user.name?.split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2)||"?"} size={32} idx={0}/>
-          <div><div style={{ fontSize:13, fontWeight:800, color:C.text }}>{user.name}</div><div style={{ fontSize:10, color:C.textMuted }}>{school.name}</div></div>
+    <div style={isMobile ? { maxWidth:390, margin:"0 auto", background:C.bg, minHeight:"100vh", fontFamily:"'Segoe UI',system-ui,sans-serif", color:C.text } : { width:"100%", background:C.bg, minHeight:"100vh", fontFamily:"'Segoe UI',system-ui,sans-serif", color:C.text, display:"grid", gridTemplateColumns:"250px 1fr", gridTemplateRows:"auto 1fr" }}>
+      {/* DESKTOP SIDEBAR */}
+      {!isMobile && (
+        <div style={{ gridColumn:"1", gridRow:"1/3", background:C.surface, borderRight:`1px solid ${C.border}`, padding:"20px 0", position:"sticky", top:0, height:"100vh", overflowY:"auto" }}>
+          <div style={{ padding:"0 16px", marginBottom:24 }}><div style={{ fontSize:12, fontWeight:800, color:C.textMuted, marginBottom:12, textTransform:"uppercase" }}>{user.name}</div></div>
+          <nav style={{ display:"flex", flexDirection:"column", gap:4 }}>
+            {[{id:"myTasks",label:"📋 Görevlerim"},{id:"profile",label:"👤 Profilim"},{id:"contact",label:"✉ İletişim"}].map(tab=>{ const active=screen===tab.id||(tab.id==="myTasks"&&screen==="taskView"); return <button key={tab.id} onClick={()=>setScreen(tab.id)} style={{ width:"100%", background:active?C.purpleSoft:"transparent", border:"none", color:active?C.purple:C.textMuted, borderLeft:`3px solid ${active?C.purple:"transparent"}`, padding:"12px 16px", textAlign:"left", cursor:"pointer", fontSize:14, fontWeight:active?700:600, transition:"all 0.2s", fontFamily:"inherit" }} onMouseEnter={(e)=>{ e.currentTarget.style.background=C.card; }} onMouseLeave={(e)=>{ e.currentTarget.style.background=active?C.purpleSoft:"transparent"; }}>{tab.label}</button>; })}
+          </nav>
+          <div style={{ borderTop:`1px solid ${C.border}`, marginTop:20, padding:"20px 16px" }}><button onClick={onLogout} style={{ width:"100%", background:C.redSoft, border:`1px solid ${C.red}44`, color:C.red, borderRadius:8, padding:"10px", fontSize:12, fontWeight:700, cursor:"pointer" }}>Çıkış Yap</button></div>
         </div>
-        <button onClick={onLogout} style={{ background:C.redSoft, border:`1px solid ${C.red}33`, color:C.red, borderRadius:8, padding:"5px 12px", fontSize:11, fontWeight:700, cursor:"pointer" }}>Çıkış</button>
+      )}
+      
+      {/* HEADER */}
+      <div style={isMobile ? { background:C.surface, borderBottom:`1px solid ${C.border}`, padding:"14px 18px 12px", display:"flex", justifyContent:"space-between", alignItems:"center", position:"sticky", top:0, zIndex:10 } : { gridColumn:"2", background:C.surface, borderBottom:`1px solid ${C.border}`, padding:"14px 24px", display:"flex", justifyContent:"space-between", alignItems:"center", position:"sticky", top:0, zIndex:10 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+          <Avatar initials={user.name?.split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2)||"?"} size={isMobile?32:36} idx={0}/>
+          <div><div style={{ fontSize:isMobile?13:14, fontWeight:800, color:C.text }}>{user.name}</div><div style={{ fontSize:isMobile?10:11, color:C.textMuted }}>{school.name}</div></div>
+        </div>
+        {isMobile && <button onClick={onLogout} style={{ background:C.redSoft, border:`1px solid ${C.red}33`, color:C.red, borderRadius:8, padding:"5px 12px", fontSize:11, fontWeight:700, cursor:"pointer" }}>Çıkış</button>}
       </div>
-      <div style={{ paddingTop:16, paddingBottom:80 }}>
+      
+      {/* CONTENT */}
+      <div style={isMobile ? { paddingTop:16, paddingBottom:80 } : { gridColumn:"2", paddingTop:16, paddingBottom:24, paddingRight:24, paddingLeft:24 }}>
         {screen==="myTasks"&&(
           <div style={{ padding:"0 16px 24px" }}>
             <div style={{ fontSize:20, fontWeight:800, color:C.text, marginBottom:6 }}>Görevlerim</div>
@@ -1313,13 +1327,14 @@ function TeacherPanel({ session, onLogout }) {
         )}
       </div>
 
-      {toast && <div style={{ position:"fixed", bottom:80, left:"50%", transform:"translateX(-50%)", background:toast.color, color:"#fff", borderRadius:12, padding:"10px 18px", fontSize:13, fontWeight:600, boxShadow:"0 4px 20px rgba(0,0,0,0.4)", zIndex:100, whiteSpace:"nowrap" }}>{toast.msg}</div>}
+      {toast && <div style={isMobile ? { position:"fixed", bottom:80, left:"50%", transform:"translateX(-50%)", background:toast.color, color:"#fff", borderRadius:12, padding:"10px 18px", fontSize:13, fontWeight:600, zIndex:100 } : { position:"fixed", bottom:20, left:"50%", transform:"translateX(-50%)", background:toast.color, color:"#fff", borderRadius:12, padding:"10px 18px", fontSize:13, fontWeight:600, zIndex:100 }}>{toast.msg}</div>}
 
-      <div style={{ position:"fixed", bottom:0, left:"50%", transform:"translateX(-50%)", width:"100%", maxWidth:390, background:C.surface, borderTop:`1px solid ${C.border}`, display:"flex" }}>
-        {[{id:"myTasks",icon:"📋",label:"Görevlerim"},{id:"message",icon:"✉",label:"Mesaj"},{id:"profile",icon:"👤",label:"Profil"}].map(tab=>{
-          const active = screen===tab.id || (tab.id==="myTasks"&&screen==="taskView");
-          return <button key={tab.id} onClick={()=>setScreen(tab.id)} style={{ flex:1, background:"none", border:"none", padding:"10px 0 12px", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:3 }}><span style={{ fontSize:20, filter:active?"none":"grayscale(1) opacity(0.5)" }}>{tab.icon}</span><span style={{ fontSize:10, color:active?C.accent:C.textDim, fontWeight:active?700:400 }}>{tab.label}</span></button>;
-        })}
+      {isMobile && (
+        <div style={{ position:"fixed", bottom:0, left:"50%", transform:"translateX(-50%)", width:"100%", maxWidth:390, background:C.surface, borderTop:`1px solid ${C.border}`, display:"flex" }}>
+          {[{id:"myTasks",icon:"📋",label:"Görevlerim"},{id:"contact",icon:"✉",label:"İletişim"},{id:"profile",icon:"👤",label:"Profil"}].map(tab=>{ const active=screen===tab.id||(tab.id==="myTasks"&&screen==="taskView"); return <button key={tab.id} onClick={()=>setScreen(tab.id)} style={{ flex:1, background:"none", border:"none", padding:"10px 0 12px", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:3 }}><span style={{ fontSize:20, filter:active?"none":"grayscale(1) opacity(0.5)" }}>{tab.icon}</span><span style={{ fontSize:10, color:active?C.purple:C.textDim, fontWeight:active?700:400 }}>{tab.label}</span></button>; })}
+        </div>
+      )}
+      {isMobile && <div style={{ height:64 }} />}
       </div>
     </div>
   );
