@@ -1234,50 +1234,200 @@ function TeacherPanel({ session, onLogout, isMobile }) {
   );
 
   return (
-    <div style={{ maxWidth:390, margin:"0 auto", background:C.bg, minHeight:"100vh", fontFamily:"'Segoe UI',system-ui,sans-serif", color:C.text }}>
-      <div style={{ background:C.surface, borderBottom:`1px solid ${C.border}`, padding:"14px 18px 12px", display:"flex", justifyContent:"space-between", alignItems:"center", position:"sticky", top:0, zIndex:10 }}>
-        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-          <Avatar initials={user.name?.split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2)||"?"} size={32} idx={0}/>
-          <div><div style={{ fontSize:13, fontWeight:800, color:C.text }}>{user.name}</div><div style={{ fontSize:10, color:C.textMuted }}>{school.name}</div></div>
-        </div>
-        <button onClick={onLogout} style={{ background:C.redSoft, border:`1px solid ${C.red}33`, color:C.red, borderRadius:8, padding:"5px 12px", fontSize:11, fontWeight:700, cursor:"pointer" }}>Çıkış</button>
-      </div>
-      <div style={{ paddingTop:16, paddingBottom:80 }}>
-        {screen==="myTasks"&&(
-          <div style={{ padding:"0 16px 24px" }}>
-            <div style={{ fontSize:20, fontWeight:800, color:C.text, marginBottom:6 }}>Görevlerim</div>
-            <div style={{ fontSize:13, color:C.textMuted, marginBottom:20 }}>Toplam {all.length} görev</div>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8, marginBottom:22 }}>
-              {[{label:"Bekliyor",value:all.filter(t=>t.status==="bekliyor").length,color:C.yellow},{label:"Gecikmiş",value:all.filter(t=>t.status==="gecikmiş").length,color:C.red},{label:"Tamamlandı",value:done.length,color:C.green}].map(s=><div key={s.label} style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:12, padding:"12px 10px", textAlign:"center", borderTop:`3px solid ${s.color}` }}><div style={{ fontSize:20, fontWeight:900, color:s.color }}>{s.value}</div><div style={{ fontSize:10, color:C.textMuted, marginTop:2 }}>{s.label}</div></div>)}
+    <div style={isMobile ? {
+      maxWidth: 390,
+      margin: "0 auto",
+      background: C.bg,
+      minHeight: "100vh",
+      fontFamily: "'Segoe UI',system-ui,sans-serif",
+      color: C.text
+    } : {
+      width: "100%",
+      background: C.bg,
+      minHeight: "100vh",
+      fontFamily: "'Segoe UI',system-ui,sans-serif",
+      color: C.text,
+      display: "grid",
+      gridTemplateColumns: "250px 1fr",
+      gridTemplateRows: "auto 1fr"
+    }}>
+      {/* DESKTOP SIDEBAR NAV */}
+      {!isMobile && (
+        <div style={{
+          gridColumn: "1",
+          gridRow: "1 / 3",
+          background: C.surface,
+          borderRight: `1px solid ${C.border}`,
+          padding: "20px 0",
+          position: "sticky",
+          top: 0,
+          height: "100vh",
+          overflowY: "auto"
+        }}>
+          <div style={{ padding: "0 16px", marginBottom: 24 }}>
+            <div style={{ fontSize: 12, fontWeight: 800, color: C.textMuted, marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>
+              {user.name}
             </div>
-            {pending.length>0&&<><div style={{ fontSize:12, fontWeight:700, color:C.textMuted, marginBottom:8, textTransform:"uppercase" }}>Aktif Görevler</div><div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:20 }}>{pending.sort((a,b)=>new Date(a.dueDate)-new Date(b.dueDate)).map(task=>{const sc=STATUS[task.status];const dl=daysLeft(task.dueDate);return(<div key={task.id} onClick={()=>{setSelTask(task);setScreen("taskView");}} style={{ background:C.card, border:`1px solid ${task.status==="gecikmiş"?C.red+"44":C.border}`, borderRadius:14, padding:"13px 14px", cursor:"pointer" }}><div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:6 }}><span>{task.catIcon}</span><span style={{ fontSize:11, color:task.catColor, fontWeight:600 }}>{task.catTitle}</span></div><div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:6 }}><div style={{ fontSize:14, fontWeight:700, color:C.text, flex:1, marginRight:8 }}>{task.title}</div><Badge label={sc.label} color={sc.color} bg={sc.bg}/></div><div style={{ display:"flex", justifyContent:"space-between" }}><span style={{ fontSize:11, color:C.textMuted }}>📅 {fmtDate(task.dueDate)} · {task.dueTime}</span><span style={{ fontSize:11, fontWeight:700, color:dl<0?C.red:dl<=3?C.yellow:C.textDim }}>{dl<0?`${Math.abs(dl)} gün geçti`:dl===0?"Bugün!":`${dl} gün kaldı`}</span></div></div>);})}</div></>}
-            {done.length>0&&<><div style={{ fontSize:12, fontWeight:700, color:C.textMuted, marginBottom:8, textTransform:"uppercase" }}>Tamamlananlar</div><div style={{ display:"flex", flexDirection:"column", gap:8 }}>{done.map(task=><div key={task.id} onClick={()=>{setSelTask(task);setScreen("taskView");}} style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, padding:"11px 14px", cursor:"pointer", opacity:0.7 }}><div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}><span style={{ fontSize:13, fontWeight:600, color:C.textMuted, textDecoration:"line-through" }}>{task.title}</span><Badge label="Tamamlandı" color={C.green} bg={C.greenSoft}/></div></div>)}</div></>}
+          </div>
+          <nav style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {[
+              { id: "myTasks", label: "📋 Görevlerim" },
+              { id: "profile", label: "👤 Profilim" },
+              { id: "contact", label: "✉ Yönetim ile İletişim" },
+            ].map(tab => {
+              const active = screen === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setScreen(tab.id)}
+                  style={{
+                    width: "100%",
+                    background: active ? C.purpleSoft : "transparent",
+                    border: "none",
+                    color: active ? C.purple : C.textMuted,
+                    borderLeft: `3px solid ${active ? C.purple : "transparent"}`,
+                    padding: "12px 16px",
+                    textAlign: "left",
+                    cursor: "pointer",
+                    fontSize: 14,
+                    fontWeight: active ? 700 : 600,
+                    transition: "all 0.2s",
+                    fontFamily: "inherit"
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = C.card;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = active ? C.purpleSoft : "transparent";
+                  }}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </nav>
+          <div style={{ borderTop: `1px solid ${C.border}`, marginTop: 20, paddingTop: 20, padding: "20px 16px" }}>
+            <button onClick={onLogout} style={{ width: "100%", background: C.redSoft, border: `1px solid ${C.red}44`, color: C.red, borderRadius: 8, padding: "10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Çıkış Yap</button>
+          </div>
+        </div>
+      )}
+
+      {/* HEADER */}
+      <div style={isMobile ? {
+        background: C.surface,
+        borderBottom: `1px solid ${C.border}`,
+        padding: "14px 18px 12px",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        position: "sticky",
+        top: 0,
+        zIndex: 10
+      } : {
+        gridColumn: "2",
+        background: C.surface,
+        borderBottom: `1px solid ${C.border}`,
+        padding: "14px 24px",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        position: "sticky",
+        top: 0,
+        zIndex: 10
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <Avatar initials={user.name?.split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2)||"?"} size={isMobile ? 32 : 36} idx={0}/>
+          <div><div style={{ fontSize: isMobile ? 13 : 14, fontWeight: 800, color: C.text }}>{user.name}</div><div style={{ fontSize: isMobile ? 10 : 11, color: C.textMuted }}>{school.name}</div></div>
+        </div>
+        {isMobile && <button onClick={onLogout} style={{ background: C.redSoft, border: `1px solid ${C.red}33`, color: C.red, borderRadius: 8, padding: "5px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Çıkış</button>}
+      </div>
+
+      {/* CONTENT */}
+      <div style={isMobile ? { paddingTop: 16, paddingBottom: 80 } : { gridColumn: "2", paddingTop: 16, paddingBottom: 24, paddingRight: 24, paddingLeft: 24 }}>
+        {screen === "myTasks" && (
+          <div style={isMobile ? { padding: "0 16px 24px" } : { padding: 0 }}>
+            <div style={{ fontSize: isMobile ? 20 : 28, fontWeight: 800, color: C.text, marginBottom: 6 }}>Görevlerim</div>
+            <div style={{ fontSize: isMobile ? 13 : 14, color: C.textMuted, marginBottom: 20 }}>Toplam {all.length} görev</div>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(3,1fr)" : "repeat(3,1fr)", gap: isMobile ? 8 : 12, marginBottom: 22 }}>
+              {[{label:"Bekliyor",value:all.filter(t=>t.status==="bekliyor").length,color:C.yellow},{label:"Gecikmiş",value:all.filter(t=>t.status==="gecikmiş").length,color:C.red},{label:"Tamamlandı",value:done.length,color:C.green}].map(s=><div key={s.label} style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:12, padding:isMobile?"12px 10px":"16px 14px", textAlign:"center", borderTop:`3px solid ${s.color}` }}><div style={{ fontSize:isMobile?20:24, fontWeight:900, color:s.color }}>{s.value}</div><div style={{ fontSize:isMobile?10:11, color:C.textMuted, marginTop:isMobile?2:4 }}>{s.label}</div></div>)}
+            </div>
+            {pending.length>0&&<><div style={{ fontSize:12, fontWeight:700, color:C.textMuted, marginBottom:8, textTransform:"uppercase" }}>Aktif Görevler</div><div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:20 }}>{pending.sort((a,b)=>new Date(a.dueDate)-new Date(b.dueDate)).map(task=>{const sc=STATUS[task.status];const dl=daysLeft(task.dueDate);return(<div key={task.id} onClick={()=>{setSelTask(task);setScreen("taskView");}} style={{ background:C.card, border:`1px solid ${task.status==="gecikmiş"?C.red+"44":C.border}`, borderRadius:14, padding:isMobile?"13px 14px":"16px 16px", cursor:"pointer", transition:"all 0.2s" }} onMouseEnter={(e)=>{if(!isMobile){e.currentTarget.style.background=C.surface; e.currentTarget.style.transform="translateX(4px)"}}} onMouseLeave={(e)=>{if(!isMobile){e.currentTarget.style.background=C.card; e.currentTarget.style.transform="translateX(0)"}}}><div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:6 }}><span>{task.catIcon}</span><span style={{ fontSize:11, color:task.catColor, fontWeight:600 }}>{task.catTitle}</span></div><div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:6 }}><div style={{ fontSize:isMobile?13:14, fontWeight:700, color:C.text, flex:1, marginRight:8 }}>{task.title}</div><Badge label={sc.label} color={sc.color} bg={sc.bg}/></div><div style={{ display:"flex", justifyContent:"space-between" }}><span style={{ fontSize:11, color:C.textMuted }}>📅 {fmtDate(task.dueDate)} · {task.dueTime}</span><span style={{ fontSize:11, fontWeight:700, color:dl<0?C.red:dl<=3?C.yellow:C.textDim }}>{dl<0?`${Math.abs(dl)} gün geçti`:dl===0?"Bugün!":`${dl} gün kaldı`}</span></div></div>);})}</div></>}
+            {done.length>0&&<><div style={{ fontSize:12, fontWeight:700, color:C.textMuted, marginBottom:8, textTransform:"uppercase" }}>Tamamlananlar</div><div style={{ display:"flex", flexDirection:"column", gap:8 }}>{done.map(task=><div key={task.id} onClick={()=>{setSelTask(task);setScreen("taskView");}} style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:12, padding:isMobile?"11px 14px":"14px 16px", cursor:"pointer", opacity:0.7 }}><div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}><span style={{ fontSize:isMobile?13:13, fontWeight:600, color:C.textMuted, textDecoration:"line-through" }}>{task.title}</span><Badge label="Tamamlandı" color={C.green} bg={C.greenSoft}/></div></div>)}</div></>}
             {all.length===0&&<div style={{ textAlign:"center", padding:48, color:C.textMuted }}><div style={{ fontSize:40, marginBottom:12 }}>🎉</div><div style={{ fontSize:15, fontWeight:700 }}>Atanmış göreviniz yok</div></div>}
           </div>
         )}
-        {screen==="taskView"&&selTask&&(
-          <div style={{ padding:"0 16px 24px" }}>
-            <button onClick={()=>setScreen("myTasks")} style={{ background:"none", border:"none", color:C.accent, fontSize:14, cursor:"pointer", marginBottom:16, padding:0, fontWeight:600 }}>← Geri</button>
-            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12, background:`${selTask.catColor}15`, border:`1px solid ${selTask.catColor}33`, borderRadius:10, padding:"7px 12px" }}><span>{selTask.catIcon}</span><span style={{ fontSize:12, color:selTask.catColor, fontWeight:700 }}>{selTask.catTitle}</span></div>
-            <div style={{ background:C.card, borderRadius:18, padding:18, border:`1px solid ${C.border}`, marginBottom:12 }}>
-              <div style={{ fontSize:18, fontWeight:800, color:C.text, marginBottom:10 }}>{selTask.title}</div>
+
+        {screen === "taskView" && selTask && (
+          <div style={isMobile ? { padding: "0 16px 24px" } : { padding: 0 }}>
+            <button onClick={() => setScreen("myTasks")} style={{ background: "none", border: "none", color: C.accent, fontSize: 14, cursor: "pointer", marginBottom: 16, padding: 0, fontWeight: 600 }}>← Geri</button>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, background: `${selTask.catColor}15`, border: `1px solid ${selTask.catColor}33`, borderRadius: 10, padding: "7px 12px" }}><span>{selTask.catIcon}</span><span style={{ fontSize: 12, color: selTask.catColor, fontWeight: 700 }}>{selTask.catTitle}</span></div>
+            <div style={{ background: C.card, borderRadius: 18, padding: 18, border: `1px solid ${C.border}`, marginBottom: 12 }}>
+              <div style={{ fontSize: isMobile ? 18 : 20, fontWeight: 800, color: C.text, marginBottom: 10 }}>{selTask.title}</div>
               <Badge label={STATUS[selTask.status].label} color={STATUS[selTask.status].color} bg={STATUS[selTask.status].bg}/>
-              {selTask.desc&&<div style={{ fontSize:13, color:C.textMuted, lineHeight:1.6, marginTop:12 }}>{selTask.desc}</div>}
+              {selTask.desc && <div style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.6, marginTop: 12 }}>{selTask.desc}</div>}
             </div>
-            <div style={{ background:C.card, borderRadius:18, padding:18, border:`1px solid ${C.border}`, marginBottom:12 }}>
-              <div style={{ fontSize:12, fontWeight:700, color:C.textMuted, marginBottom:10, textTransform:"uppercase" }}>Tarih Bilgisi</div>
-              <div style={{ display:"flex", gap:20 }}>
-                <div><div style={{ fontSize:11, color:C.textDim }}>Son Tarih</div><div style={{ fontSize:14, fontWeight:700, color:C.text, marginTop:2 }}>📅 {fmtDate(selTask.dueDate)}</div></div>
-                <div><div style={{ fontSize:11, color:C.textDim }}>Saat</div><div style={{ fontSize:14, fontWeight:700, color:C.text, marginTop:2 }}>🕐 {selTask.dueTime}</div></div>
+            <div style={{ background: C.card, borderRadius: 18, padding: 18, border: `1px solid ${C.border}`, marginBottom: 12 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: C.textMuted, marginBottom: 10, textTransform: "uppercase" }}>Tarih Bilgisi</div>
+              <div style={{ display: "flex", gap: 20 }}>
+                <div><div style={{ fontSize: 11, color: C.textDim }}>Son Tarih</div><div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginTop: 2 }}>📅 {fmtDate(selTask.dueDate)}</div></div>
+                <div><div style={{ fontSize: 11, color: C.textDim }}>Saat</div><div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginTop: 2 }}>🕐 {selTask.dueTime}</div></div>
               </div>
             </div>
-            <div style={{ background:C.yellowSoft, border:`1px solid ${C.yellow}44`, borderRadius:14, padding:"12px 16px" }}>
-              <div style={{ fontSize:13, color:C.yellow, fontWeight:600 }}>ℹ Durum güncellemesi yalnızca okul yönetimi tarafından yapılabilir.</div>
+            <div style={{ background: C.yellowSoft, border: `1px solid ${C.yellow}44`, borderRadius: 14, padding: "12px 16px" }}>
+              <div style={{ fontSize: 13, color: C.yellow, fontWeight: 600 }}>ℹ Durum güncellemesi yalnızca okul yönetimi tarafından yapılabilir.</div>
             </div>
           </div>
         )}
 
-        {/* MESAJ GÖNDER */}
+        {screen === "contact" && (
+          <div style={isMobile ? { padding: "0 16px 24px" } : { padding: 0 }}>
+            <div style={{ fontSize: isMobile ? 20 : 24, fontWeight: 800, color: C.text, marginBottom: 20 }}>Yönetim ile İletişim</div>
+            <div style={{ background: C.card, borderRadius: 16, padding: 20, border: `1px solid ${C.border}`, marginBottom: 16 }}>
+              <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 10, fontWeight: 700, textTransform: "uppercase" }}>Mesajınız</div>
+              <textarea value={msgText} onChange={e => setMsgText(e.target.value)} placeholder="Okul yönetimine bir mesaj yazınız..." style={{ width: "100%", minHeight: 120, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 10, padding: 12, color: C.text, fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }} />
+              <button onClick={handleSendMessage} disabled={msgSaving || !msgText.trim()} style={{ width: "100%", marginTop: 12, background: msgSaving ? C.surface : `linear-gradient(135deg,${C.purple},${C.accent})`, border: "none", color: msgSaving ? C.textMuted : "#fff", borderRadius: 10, padding: 12, fontSize: 14, fontWeight: 700, cursor: msgSaving ? "default" : "pointer" }}>{msgSaving ? "Gönderiliyor..." : "Mesaj Gönder →"}</button>
+            </div>
+          </div>
+        )}
+
+        {screen === "profile" && (
+          <div style={isMobile ? { padding: "0 16px 24px" } : { padding: 0 }}>
+            <div style={{ fontSize: isMobile ? 20 : 24, fontWeight: 800, color: C.text, marginBottom: 20 }}>Profilim</div>
+            <div style={{ background: C.card, borderRadius: 16, padding: 20, border: `1px solid ${C.border}` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
+                <Avatar initials={user.name?.split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2)||"?"} size={64} idx={0}/>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: C.text }}>{user.name}</div>
+                  <div style={{ fontSize: 13, color: C.textMuted }}>Öğretmen</div>
+                </div>
+              </div>
+              <div style={{ background: C.bg, borderRadius: 12, padding: 14, textAlign: "center" }}>
+                <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 6 }}>Okul</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{school.name}</div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* MOBILE BOTTOM NAV */}
+      {isMobile && (
+        <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 390, background: C.surface, borderTop: `1px solid ${C.border}`, display: "flex" }}>
+          {[
+            { id: "myTasks", label: "Görevler", icon: "📋" },
+            { id: "contact", label: "İletişim", icon: "✉" },
+            { id: "profile", label: "Profil", icon: "👤" }
+          ].map(tab => {
+            const active = screen === tab.id || (tab.id === "myTasks" && screen === "taskView");
+            return <button key={tab.id} onClick={() => setScreen(tab.id)} style={{ flex: 1, background: "none", border: "none", padding: "10px 0 12px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}><span style={{ fontSize: 20, filter: active ? "none" : "grayscale(1) opacity(0.5)" }}>{tab.icon}</span><span style={{ fontSize: 10, color: active ? C.purple : C.textDim, fontWeight: active ? 700 : 400 }}>{tab.label}</span></button>;
+          })}
+        </div>
+      )}
+      {isMobile && <div style={{ height: 64 }} />}
+
+      {toast && <div style={isMobile ? { position: "fixed", bottom: 80, left: "50%", transform: "translateX(-50%)", background: toast.color, color: "#fff", borderRadius: 12, padding: "10px 18px", fontSize: 13, fontWeight: 600, zIndex: 100 } : { position: "fixed", bottom: 20, left: "50%", transform: "translateX(-50%)", background: toast.color, color: "#fff", borderRadius: 12, padding: "10px 18px", fontSize: 13, fontWeight: 600, zIndex: 100 }}>{toast.msg}</div>}
+    </div>
+  );
         {screen==="message"&&(
           <div style={{ padding:"0 16px 24px" }}>
             <div style={{ fontSize:20, fontWeight:800, color:C.text, marginBottom:6 }}>Yönetime Mesaj</div>
