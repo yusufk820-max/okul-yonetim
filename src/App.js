@@ -507,8 +507,10 @@ function AdminPanel({ session, onLogout, isMobile }) {
               { id: "dashboard", label: "📊 Genel Bakış", icon: "⊞" },
               { id: "tasks", label: "📋 Görevler", icon: "📋" },
               { id: "teachers", label: "👥 Öğretmenler", icon: "👥" },
+              { id: "messages", label: "✉ Mesajlar", icon: "✉" },
+              { id: "profile", label: "👤 Profil", icon: "👤" },
             ].map(tab => {
-              const active = screen === tab.id || (tab.id === "tasks" && ["taskDetail", "catDetail", "addTask", "addCat"].includes(screen));
+              const active = screen === tab.id || (tab.id === "tasks" && ["taskDetail", "catDetail", "addTask", "addCat"].includes(screen)) || (tab.id === "teachers" && ["teacherDetail", "addTeacher"].includes(screen));
               return (
                 <button
                   key={tab.id}
