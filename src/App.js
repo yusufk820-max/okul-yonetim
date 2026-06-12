@@ -1335,7 +1335,6 @@ function TeacherPanel({ session, onLogout, isMobile }) {
         </div>
       )}
       {isMobile && <div style={{ height:64 }} />}
-      </div>
     </div>
   );
 }
