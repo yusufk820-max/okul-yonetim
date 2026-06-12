@@ -1,30 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 
-export default function Landing({ onLogin, onSetup, language = "tr", onLanguageChange }) {
+export default function Landing({ onLogin, onSetup }) {
   const [openFaq, setOpenFaq] = useState(null);
   const [modal, setModal] = useState(null); // "iletisim" | "yardim" | null
   const starsRef = useRef(null);
-
-  // ─── TRANSLATION HELPER ───
-  const TR = {
-    nasil: "Nasıl Çalışır", ozellikler: "Özellikler", fiyat: "Fiyat", sss: "SSS",
-    kurumGirisi: "Kurum Girişi", okulKaydi: "Okul Kaydı",
-    heroBadge: "🎓 Okullar için görev takip sistemi",
-    hero1: "Okulunuzun tüm görevleri", hero2: "tek ekranda",
-    heroDesc: "TaskiPro ile okul yönetimi artık çok kolay: görevleri kategorilere ayırın, öğretmenlere atayın, önemli gün ve haftaları takip edin. Müdürler planlar, ekip uygular.",
-    heroBtn1: "Okulunuzu Ücretsiz Kaydedin", heroBtn2: "Nasıl Çalışır? →",
-    heroNote1: "Kurulum gerektirmez", heroNote2: "Kurum koduyla saniyeler içinde giriş",
-  };
-  const EN = {
-    nasil: "How It Works", ozellikler: "Features", fiyat: "Pricing", sss: "FAQ",
-    kurumGirisi: "School Login", okulKaydi: "Register School",
-    heroBadge: "🎓 Task tracking system for schools",
-    hero1: "All your school tasks", hero2: "on one screen",
-    heroDesc: "With TaskiPro, school management is easy: organize tasks by category, assign them to teachers, and track important days and weeks. Principals plan, teams execute.",
-    heroBtn1: "Register Your School Free", heroBtn2: "How It Works? →",
-    heroNote1: "No setup required", heroNote2: "Login in seconds with your school code",
-  };
-  const t = (key) => (language === "en" ? EN[key] : TR[key]) || TR[key] || key;
 
   useEffect(() => {
     const c = starsRef.current;
@@ -86,18 +65,14 @@ export default function Landing({ onLogin, onSetup, language = "tr", onLanguageC
               <span className="logo-text">Taski<span>Pro</span></span>
             </button>
             <ul className="nav-links">
-              <li><button onClick={() => scrollTo("nasil")}>{t("nasil")}</button></li>
-              <li><button onClick={() => scrollTo("ozellikler")}>{t("ozellikler")}</button></li>
-              <li><button onClick={() => scrollTo("fiyat")}>{t("fiyat")}</button></li>
-              <li><button onClick={() => scrollTo("sss")}>{t("sss")}</button></li>
+              <li><button onClick={() => scrollTo("nasil")}>Nasıl Çalışır</button></li>
+              <li><button onClick={() => scrollTo("ozellikler")}>Özellikler</button></li>
+              <li><button onClick={() => scrollTo("fiyat")}>Fiyat</button></li>
+              <li><button onClick={() => scrollTo("sss")}>SSS</button></li>
             </ul>
-            <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-              <div style={{ display: "flex", gap: 6 }}>
-                <button onClick={() => onLanguageChange && onLanguageChange("tr")} style={{ padding: "6px 10px", borderRadius: 8, border: language === "tr" ? "2px solid #4f8ef7" : "1px solid rgba(255,255,255,0.2)", background: language === "tr" ? "rgba(79,142,247,0.12)" : "transparent", color: language === "tr" ? "#4f8ef7" : "#e8eaf0", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>TR</button>
-                <button onClick={() => onLanguageChange && onLanguageChange("en")} style={{ padding: "6px 10px", borderRadius: 8, border: language === "en" ? "2px solid #4f8ef7" : "1px solid rgba(255,255,255,0.2)", background: language === "en" ? "rgba(79,142,247,0.12)" : "transparent", color: language === "en" ? "#4f8ef7" : "#e8eaf0", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>EN</button>
-              </div>
-              <button className="btn-soft" onClick={onLogin}>{t("kurumGirisi")}</button>
-              <button className="btn-grad" onClick={onSetup}>{t("okulKaydi")}</button>
+            <div style={{ display: "flex", gap: 12 }}>
+              <button className="btn-soft" onClick={onLogin}>Kurum Girişi</button>
+              <button className="btn-grad" onClick={onSetup}>Okul Kaydı</button>
             </div>
           </div>
         </nav>
@@ -106,16 +81,16 @@ export default function Landing({ onLogin, onSetup, language = "tr", onLanguageC
         <header className="hero" id="top">
           <div className="wrap hero-grid">
             <div>
-              <span className="hero-badge">{t("heroBadge")}</span>
-              <h1>{t("hero1")} <span className="grad-text">{t("hero2")}</span></h1>
+              <span className="hero-badge">🎓 Okullar için görev takip sistemi</span>
+              <h1>Okulunuzun tüm görevleri <span className="grad-text">tek ekranda</span></h1>
               <p className="hero-sub">
-                {t("heroDesc")}
+                TaskiPro ile okul yönetimi artık çok kolay: görevleri kategorilere ayırın, öğretmenlere atayın, önemli gün ve haftaları takip edin. Müdürler planlar, ekip uygular.
               </p>
               <div className="hero-actions">
-                <button className="btn-grad btn-big" onClick={onSetup}>{t("heroBtn1")}</button>
-                <button className="btn-soft btn-big" onClick={() => scrollTo("nasil")}>{t("heroBtn2")}</button>
+                <button className="btn-grad btn-big" onClick={onSetup}>Okulunuzu Ücretsiz Kaydedin</button>
+                <button className="btn-soft btn-big" onClick={() => scrollTo("nasil")}>Nasıl Çalışır? →</button>
               </div>
-              <p className="hero-note"><span className="check">✓</span> {t("heroNote1")} &nbsp;·&nbsp; <span className="check">✓</span> {t("heroNote2")}</p>
+              <p className="hero-note"><span className="check">✓</span> Kurulum gerektirmez &nbsp;·&nbsp; <span className="check">✓</span> Kurum koduyla saniyeler içinde giriş</p>
             </div>
 
             {/* APP MOCKUP */}
