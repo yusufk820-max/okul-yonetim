@@ -1240,7 +1240,7 @@ function TeacherPanel({ session, onLogout, isMobile }) {
         <div style={{ gridColumn:"1", gridRow:"1/3", background:C.surface, borderRight:`1px solid ${C.border}`, padding:"20px 0", position:"sticky", top:0, height:"100vh", overflowY:"auto" }}>
           <div style={{ padding:"0 16px", marginBottom:24 }}><div style={{ fontSize:12, fontWeight:800, color:C.textMuted, marginBottom:12, textTransform:"uppercase" }}>{user.name}</div></div>
           <nav style={{ display:"flex", flexDirection:"column", gap:4 }}>
-            {[{id:"myTasks",label:"📋 Görevlerim"},{id:"profile",label:"👤 Profilim"},{id:"contact",label:"✉ İletişim"}].map(tab=>{ const active=screen===tab.id||(tab.id==="myTasks"&&screen==="taskView"); return <button key={tab.id} onClick={()=>setScreen(tab.id)} style={{ width:"100%", background:active?C.purpleSoft:"transparent", border:"none", color:active?C.purple:C.textMuted, borderLeft:`3px solid ${active?C.purple:"transparent"}`, padding:"12px 16px", textAlign:"left", cursor:"pointer", fontSize:14, fontWeight:active?700:600, transition:"all 0.2s", fontFamily:"inherit" }} onMouseEnter={(e)=>{ e.currentTarget.style.background=C.card; }} onMouseLeave={(e)=>{ e.currentTarget.style.background=active?C.purpleSoft:"transparent"; }}>{tab.label}</button>; })}
+            {[{id:"myTasks",label:"📋 Görevlerim"},{id:"contact",label:"✉ Mesaj"},{id:"profile",label:"👤 Profilim"}].map(tab=>{ const active=screen===tab.id||(tab.id==="myTasks"&&screen==="taskView"); return <button key={tab.id} onClick={()=>setScreen(tab.id)} style={{ width:"100%", background:active?C.purpleSoft:"transparent", border:"none", color:active?C.purple:C.textMuted, borderLeft:`3px solid ${active?C.purple:"transparent"}`, padding:"12px 16px", textAlign:"left", cursor:"pointer", fontSize:14, fontWeight:active?700:600, transition:"all 0.2s", fontFamily:"inherit" }} onMouseEnter={(e)=>{ e.currentTarget.style.background=C.card; }} onMouseLeave={(e)=>{ e.currentTarget.style.background=active?C.purpleSoft:"transparent"; }}>{tab.label}</button>; })}
           </nav>
           <div style={{ borderTop:`1px solid ${C.border}`, marginTop:20, padding:"20px 16px" }}><button onClick={onLogout} style={{ width:"100%", background:C.redSoft, border:`1px solid ${C.red}44`, color:C.red, borderRadius:8, padding:"10px", fontSize:12, fontWeight:700, cursor:"pointer" }}>Çıkış Yap</button></div>
         </div>
@@ -1292,7 +1292,7 @@ function TeacherPanel({ session, onLogout, isMobile }) {
         )}
 
         {/* MESAJ GÖNDER */}
-        {screen==="message"&&(
+        {screen==="contact"&&(
           <div style={{ padding:"0 16px 24px" }}>
             <div style={{ fontSize:20, fontWeight:800, color:C.text, marginBottom:6 }}>Yönetime Mesaj</div>
             <div style={{ fontSize:13, color:C.textMuted, marginBottom:20 }}>Okul idaresine bir mesaj iletin</div>
@@ -1331,7 +1331,7 @@ function TeacherPanel({ session, onLogout, isMobile }) {
 
       {isMobile && (
         <div style={{ position:"fixed", bottom:0, left:"50%", transform:"translateX(-50%)", width:"100%", maxWidth:390, background:C.surface, borderTop:`1px solid ${C.border}`, display:"flex" }}>
-          {[{id:"myTasks",icon:"📋",label:"Görevlerim"},{id:"contact",icon:"✉",label:"İletişim"},{id:"profile",icon:"👤",label:"Profil"}].map(tab=>{ const active=screen===tab.id||(tab.id==="myTasks"&&screen==="taskView"); return <button key={tab.id} onClick={()=>setScreen(tab.id)} style={{ flex:1, background:"none", border:"none", padding:"10px 0 12px", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:3 }}><span style={{ fontSize:20, filter:active?"none":"grayscale(1) opacity(0.5)" }}>{tab.icon}</span><span style={{ fontSize:10, color:active?C.purple:C.textDim, fontWeight:active?700:400 }}>{tab.label}</span></button>; })}
+          {[{id:"myTasks",icon:"📋",label:"Görevlerim"},{id:"contact",icon:"✉",label:"Mesaj"},{id:"profile",icon:"👤",label:"Profil"}].map(tab=>{ const active=screen===tab.id||(tab.id==="myTasks"&&screen==="taskView"); return <button key={tab.id} onClick={()=>setScreen(tab.id)} style={{ flex:1, background:"none", border:"none", padding:"10px 0 12px", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:3 }}><span style={{ fontSize:20, opacity:active?1:0.6, filter:active?"none":"" }}>{tab.icon}</span><span style={{ fontSize:10, color:active?C.accent:C.textMuted, fontWeight:active?700:600 }}>{tab.label}</span></button>; })}
         </div>
       )}
       {isMobile && <div style={{ height:64 }} />}
