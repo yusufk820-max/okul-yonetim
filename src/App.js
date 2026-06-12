@@ -294,7 +294,7 @@ function SchoolSetup({ onDone, onBack }) {
 }
 
 // ─── YÖNETİCİ PANELİ ─────────────────────────────────────────
-function AdminPanel({ session, onLogout }) {
+function AdminPanel({ session, onLogout, isMobile }) {
   const { user, school, schoolCode } = session;
   const [screen, setScreen] = useState("dashboard");
   const [data, setData] = useState(null);
@@ -465,49 +465,155 @@ function AdminPanel({ session, onLogout }) {
   ];
 
   return (
-    <div style={{ maxWidth:390, margin:"0 auto", background:C.bg, minHeight:"100vh", fontFamily:"'Segoe UI',system-ui,sans-serif", color:C.text }}>
-      <div style={{ background:C.surface, borderBottom:`1px solid ${C.border}`, padding:"12px 18px", display:"flex", justifyContent:"space-between", alignItems:"center", position:"sticky", top:0, zIndex:10 }}>
-        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-          <div style={{ width:30, height:30, borderRadius:8, background:`linear-gradient(135deg,${C.accent},#7c3aed)`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:15 }}>🏫</div>
-          <div><div style={{ fontSize:13, fontWeight:800, color:C.text }}>{school.name}</div><div style={{ fontSize:10, color:C.textMuted }}>{user.title} · {schoolCode}</div></div>
+    <div style={isMobile ? {
+      maxWidth: 390,
+      margin: "0 auto",
+      background: C.bg,
+      minHeight: "100vh",
+      fontFamily: "'Segoe UI',system-ui,sans-serif",
+      color: C.text
+    } : {
+      width: "100%",
+      background: C.bg,
+      minHeight: "100vh",
+      fontFamily: "'Segoe UI',system-ui,sans-serif",
+      color: C.text,
+      display: "grid",
+      gridTemplateColumns: "250px 1fr",
+      gridTemplateRows: "auto 1fr"
+    }}>
+      {/* DESKTOP SIDEBAR NAV */}
+      {!isMobile && (
+        <div style={{
+          gridColumn: "1",
+          gridRow: "1 / 3",
+          background: C.surface,
+          borderRight: `1px solid ${C.border}`,
+          padding: "20px 0",
+          position: "sticky",
+          top: 0,
+          height: "100vh",
+          overflowY: "auto"
+        }}>
+          <div style={{ padding: "0 16px", marginBottom: 24 }}>
+            <div style={{ fontSize: 12, fontWeight: 800, color: C.textMuted, marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>
+              {school.name}
+            </div>
+          </div>
+          <nav style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {[
+              { id: "dashboard", label: "📊 Genel Bakış", icon: "⊞" },
+              { id: "tasks", label: "📋 Görevler", icon: "📋" },
+              { id: "teachers", label: "👥 Öğretmenler", icon: "👥" },
+            ].map(tab => {
+              const active = screen === tab.id || (tab.id === "tasks" && ["taskDetail", "catDetail", "addTask", "addCat"].includes(screen));
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setScreen(tab.id)}
+                  style={{
+                    width: "100%",
+                    background: active ? C.accentSoft : "transparent",
+                    border: "none",
+                    color: active ? C.accent : C.textMuted,
+                    borderLeft: `3px solid ${active ? C.accent : "transparent"}`,
+                    padding: "12px 16px",
+                    textAlign: "left",
+                    cursor: "pointer",
+                    fontSize: 14,
+                    fontWeight: active ? 700 : 600,
+                    transition: "all 0.2s",
+                    fontFamily: "inherit"
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = C.card;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = active ? C.accentSoft : "transparent";
+                  }}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </nav>
+          <div style={{ borderTop: `1px solid ${C.border}`, marginTop: 20, paddingTop: 20, padding: "20px 16px" }}>
+            <button onClick={() => setScreen("upgrade")} style={{ width: "100%", background: planKey(data) === "free" ? C.surface : C.purpleSoft, border: `1px solid ${planKey(data) === "free" ? C.border : C.purple + "55"}`, borderRadius: 8, padding: "10px", fontSize: 12, color: planKey(data) === "free" ? C.textMuted : C.purple, fontWeight: 700, cursor: "pointer", marginBottom: 12 }}>{planOf(data).label}</button>
+            <button onClick={onLogout} style={{ width: "100%", background: C.redSoft, border: `1px solid ${C.red}44`, color: C.red, borderRadius: 8, padding: "10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Çıkış Yap</button>
+          </div>
         </div>
-        <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-          <button onClick={()=>setScreen("upgrade")} style={{ background:planKey(data)==="free"?C.surface:C.purpleSoft, border:`1px solid ${planKey(data)==="free"?C.border:C.purple+"55"}`, borderRadius:20, padding:"3px 10px", fontSize:10, color:planKey(data)==="free"?C.textMuted:C.purple, fontWeight:700, cursor:"pointer" }}>{planOf(data).label}</button>
-          <button onClick={()=>setScreen("messages")} style={{ position:"relative", background:C.surface, border:`1px solid ${C.border}`, borderRadius:8, padding:"4px 9px", fontSize:14, cursor:"pointer" }}>✉{unreadCount>0 && <span style={{ position:"absolute", top:-6, right:-6, background:C.red, color:"#fff", borderRadius:10, fontSize:9, fontWeight:700, minWidth:16, height:16, display:"flex", alignItems:"center", justifyContent:"center", padding:"0 3px" }}>{unreadCount}</span>}</button>
-          <button onClick={onLogout} style={{ background:C.surface, border:`1px solid ${C.border}`, color:C.textMuted, borderRadius:8, padding:"4px 10px", fontSize:11, cursor:"pointer" }}>Çıkış</button>
+      )}
+
+      {/* MOBILE + DESKTOP HEADER */}
+      <div style={isMobile ? {
+        background: C.surface,
+        borderBottom: `1px solid ${C.border}`,
+        padding: "12px 18px",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        position: "sticky",
+        top: 0,
+        zIndex: 10
+      } : {
+        gridColumn: "2",
+        background: C.surface,
+        borderBottom: `1px solid ${C.border}`,
+        padding: "14px 24px",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        position: "sticky",
+        top: 0,
+        zIndex: 10
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: isMobile ? 30 : 36, height: isMobile ? 30 : 36, borderRadius: 8, background: `linear-gradient(135deg,${C.accent},#7c3aed)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: isMobile ? 15 : 18 }}>🏫</div>
+          <div><div style={{ fontSize: isMobile ? 13 : 14, fontWeight: 800, color: C.text }}>{school.name}</div><div style={{ fontSize: isMobile ? 10 : 11, color: C.textMuted }}>{user.title} · {schoolCode}</div></div>
         </div>
+        {isMobile && (
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <button onClick={() => setScreen("upgrade")} style={{ background: planKey(data) === "free" ? C.surface : C.purpleSoft, border: `1px solid ${planKey(data) === "free" ? C.border : C.purple + "55"}`, borderRadius: 20, padding: "3px 10px", fontSize: 10, color: planKey(data) === "free" ? C.textMuted : C.purple, fontWeight: 700, cursor: "pointer" }}>{planOf(data).label}</button>
+            <button onClick={() => setScreen("messages")} style={{ position: "relative", background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: "4px 9px", fontSize: 14, cursor: "pointer" }}>✉{unreadCount > 0 && <span style={{ position: "absolute", top: -6, right: -6, background: C.red, color: "#fff", borderRadius: 10, fontSize: 9, fontWeight: 700, minWidth: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px" }}>{unreadCount}</span>}</button>
+            <button onClick={onLogout} style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.textMuted, borderRadius: 8, padding: "4px 10px", fontSize: 11, cursor: "pointer" }}>Çıkış</button>
+          </div>
+        )}
       </div>
 
-      <div style={{ paddingTop:16 }}>
-        {screen==="dashboard"     && <Dashboard cats={categories} teachers={teachers} allTasks={allTasks} school={school} onNav={setScreen} onTask={t=>{setSelTask(t);setScreen("taskDetail");}} onCat={c=>{setSelCat(c);setScreen("catDetail");}} />}
-        {screen==="tasks"         && <TaskList cats={categories} teachers={teachers} onTask={t=>{setSelTask(t);setScreen("taskDetail");}} onNav={setScreen} onCat={c=>setSelCat(c)} onAddCat={()=>setScreen("addCat")} />}
-        {screen==="addCat"        && <AddCategory onAdd={handleAddCat} onBack={()=>setScreen("tasks")} />}
-        {screen==="catDetail"     && currentCat && <CatDetail cat={currentCat} teachers={teachers} onBack={()=>setScreen("tasks")} onNav={setScreen} onTask={t=>{setSelTask(t);setScreen("taskDetail");}} onDel={handleDelTask} onDelCat={handleDelCat} />}
-        {screen==="addTask"       && currentCat && <AddTask cat={currentCat} teachers={teachers} onAdd={handleAddTask} onBack={()=>setScreen("catDetail")} />}
-        {screen==="taskDetail"    && selTask     && <TaskDetail task={selTask} teachers={teachers} cats={categories} onBack={()=>setScreen("tasks")} onStatus={handleStatus} onReminder={handleReminder} onCheck={handleCheck} />}
-        {screen==="teachers"      && <TeacherList teachers={teachers} allTasks={allTasks} onSel={t=>{setSelTeacher(t);setScreen("teacherDetail");}} onNav={setScreen} />}
-        {screen==="addTeacher"    && <AddTeacher onAdd={handleAddTeacher} onBack={()=>setScreen("teachers")} />}
-        {screen==="teacherDetail" && selTeacher  && <TeacherDetail teacher={selTeacher} cats={categories} onBack={()=>setScreen("teachers")} onNav={setScreen} onTask={t=>{setSelTask(t);setScreen("taskDetail");}} onDel={handleDelTeacher} />}
-        {screen==="messages"      && <MessagesScreen messages={messages} onBack={()=>setScreen("dashboard")} onRead={handleReadMessage} onDel={handleDelMessage} />}
-        {screen==="report"        && <ReportScreen teachers={teachers} allTasks={allTasks} school={data} onBack={()=>setScreen("dashboard")} onUpgrade={()=>setScreen("upgrade")} />}
-        {screen==="upgrade"       && <PlanScreen school={data} teachers={teachers} categories={categories} allTasks={allTasks} onBack={()=>setScreen("dashboard")} onDowngrade={handleDowngrade} onRequest={handlePlanRequest} onCancelRequest={handleCancelRequest} />}
+      {/* MAIN CONTENT */}
+      <div style={isMobile ? { paddingTop: 16 } : { gridColumn: "2", paddingTop: 16 }}>
+        {screen === "dashboard" && <Dashboard cats={categories} teachers={teachers} allTasks={allTasks} school={school} onNav={setScreen} onTask={t => { setSelTask(t); setScreen("taskDetail"); }} onCat={c => { setSelCat(c); setScreen("catDetail"); }} isMobile={isMobile} />}
+        {screen === "tasks" && <TaskList cats={categories} teachers={teachers} onTask={t => { setSelTask(t); setScreen("taskDetail"); }} onNav={setScreen} onCat={c => setSelCat(c)} onAddCat={() => setScreen("addCat")} />}
+        {screen === "addCat" && <AddCategory onAdd={handleAddCat} onBack={() => setScreen("tasks")} />}
+        {screen === "catDetail" && currentCat && <CatDetail cat={currentCat} teachers={teachers} onBack={() => setScreen("tasks")} onNav={setScreen} onTask={t => { setSelTask(t); setScreen("taskDetail"); }} onDel={handleDelTask} onDelCat={handleDelCat} />}
+        {screen === "addTask" && currentCat && <AddTask cat={currentCat} teachers={teachers} onAdd={handleAddTask} onBack={() => setScreen("catDetail")} />}
+        {screen === "taskDetail" && selTask && <TaskDetail task={selTask} teachers={teachers} cats={categories} onBack={() => setScreen("tasks")} onStatus={handleStatus} onReminder={handleReminder} onCheck={handleCheck} />}
+        {screen === "teachers" && <TeacherList teachers={teachers} allTasks={allTasks} onSel={t => { setSelTeacher(t); setScreen("teacherDetail"); }} onNav={setScreen} />}
+        {screen === "addTeacher" && <AddTeacher onAdd={handleAddTeacher} onBack={() => setScreen("teachers")} />}
+        {screen === "teacherDetail" && selTeacher && <TeacherDetail teacher={selTeacher} cats={categories} onBack={() => setScreen("teachers")} onNav={setScreen} onTask={t => { setSelTask(t); setScreen("taskDetail"); }} onDel={handleDelTeacher} />}
+        {screen === "messages" && <MessagesScreen messages={messages} onBack={() => setScreen("dashboard")} onRead={handleReadMessage} onDel={handleDelMessage} />}
+        {screen === "report" && <ReportScreen teachers={teachers} allTasks={allTasks} school={data} onBack={() => setScreen("dashboard")} onUpgrade={() => setScreen("upgrade")} />}
+        {screen === "upgrade" && <PlanScreen school={data} teachers={teachers} categories={categories} allTasks={allTasks} onBack={() => setScreen("dashboard")} onDowngrade={handleDowngrade} onRequest={handlePlanRequest} onCancelRequest={handleCancelRequest} />}
       </div>
 
-      {toast && <div style={{ position:"fixed", bottom:80, left:"50%", transform:"translateX(-50%)", background:toast.color, color:"#fff", borderRadius:12, padding:"10px 18px", fontSize:13, fontWeight:600, boxShadow:"0 4px 20px rgba(0,0,0,0.4)", zIndex:100, whiteSpace:"nowrap" }}>{toast.msg}</div>}
+      {toast && <div style={isMobile ? { position: "fixed", bottom: 80, left: "50%", transform: "translateX(-50%)", background: toast.color, color: "#fff", borderRadius: 12, padding: "10px 18px", fontSize: 13, fontWeight: 600, boxShadow: "0 4px 20px rgba(0,0,0,0.4)", zIndex: 100, whiteSpace: "nowrap" } : { position: "fixed", bottom: 20, left: "50%", transform: "translateX(-50%)", background: toast.color, color: "#fff", borderRadius: 12, padding: "10px 18px", fontSize: 13, fontWeight: 600, boxShadow: "0 4px 20px rgba(0,0,0,0.4)", zIndex: 100, whiteSpace: "nowrap" }}>{toast.msg}</div>}
 
-      <div style={{ position:"fixed", bottom:0, left:"50%", transform:"translateX(-50%)", width:"100%", maxWidth:390, background:C.surface, borderTop:`1px solid ${C.border}`, display:"flex" }}>
-        {tabs.map(tab => {
-          const active = screen===tab.id||(tab.id==="tasks"&&["taskDetail","catDetail","addTask","addCat"].includes(screen))||(tab.id==="teachers"&&["teacherDetail","addTeacher"].includes(screen));
-          return <button key={tab.id} onClick={()=>setScreen(tab.id)} style={{ flex:1, background:"none", border:"none", padding:"10px 0 12px", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:3 }}><span style={{ fontSize:20, filter:active?"none":"grayscale(1) opacity(0.5)" }}>{tab.icon}</span><span style={{ fontSize:10, color:active?C.accent:C.textDim, fontWeight:active?700:400 }}>{tab.label}</span></button>;
-        })}
-      </div>
-      <div style={{ height:64 }} />
+      {/* MOBILE BOTTOM NAV */}
+      {isMobile && (
+        <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 390, background: C.surface, borderTop: `1px solid ${C.border}`, display: "flex" }}>
+          {tabs.map(tab => {
+            const active = screen === tab.id || (tab.id === "tasks" && ["taskDetail", "catDetail", "addTask", "addCat"].includes(screen)) || (tab.id === "teachers" && ["teacherDetail", "addTeacher"].includes(screen));
+            return <button key={tab.id} onClick={() => setScreen(tab.id)} style={{ flex: 1, background: "none", border: "none", padding: "10px 0 12px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}><span style={{ fontSize: 20, filter: active ? "none" : "grayscale(1) opacity(0.5)" }}>{tab.icon}</span><span style={{ fontSize: 10, color: active ? C.accent : C.textDim, fontWeight: active ? 700 : 400 }}>{tab.label}</span></button>;
+          })}
+        </div>
+      )}
+      {isMobile && <div style={{ height: 64 }} />}
     </div>
   );
 }
 
 // ─── DASHBOARD ────────────────────────────────────────────────
-function Dashboard({ cats, teachers, allTasks, school, onNav, onTask, onCat }) {
+function Dashboard({ cats, teachers, allTasks, school, onNav, onTask, onCat, isMobile }) {
   const stats = [
     { label:"Kategori",     value:cats.length,                                    color:C.accent },
     { label:"Toplam Görev", value:allTasks.length,                                color:C.purple },
@@ -516,27 +622,27 @@ function Dashboard({ cats, teachers, allTasks, school, onNav, onTask, onCat }) {
   ];
   const urgent = allTasks.filter(t=>t.status!=="tamamlandı").sort((a,b)=>new Date(a.dueDate)-new Date(b.dueDate)).slice(0,4);
   return (
-    <div style={{ padding:"0 16px 24px" }}>
-      <div style={{ marginBottom:20 }}><div style={{ fontSize:22, fontWeight:800, color:C.text }}>Genel Bakış</div><div style={{ fontSize:13, color:C.textMuted, marginTop:2 }}>{school.name}</div></div>
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:22 }}>
-        {stats.map(s=><div key={s.label} style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:"14px 16px", borderLeft:`3px solid ${s.color}` }}><div style={{ fontSize:24, fontWeight:900, color:s.color }}>{s.value}</div><div style={{ fontSize:12, color:C.textMuted, marginTop:2 }}>{s.label}</div></div>)}
+    <div style={isMobile ? { padding:"0 16px 24px" } : { padding:"32px 40px", maxWidth:"100%" }}>
+      <div style={{ marginBottom:isMobile?20:32 }}><div style={{ fontSize:isMobile?22:32, fontWeight:800, color:C.text }}>Genel Bakış</div><div style={{ fontSize:isMobile?13:15, color:C.textMuted, marginTop:2 }}>{school.name}</div></div>
+      <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4, 1fr)", gap:isMobile?10:16, marginBottom:isMobile?22:32 }}>
+        {stats.map(s=><div key={s.label} style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:isMobile?"14px 16px":"20px 24px", borderLeft:`3px solid ${s.color}`, cursor:"pointer", transition:"all 0.2s" }} onMouseEnter={(e)=>{if(!isMobile){e.currentTarget.style.transform="translateY(-4px)"; e.currentTarget.style.boxShadow=`0 8px 24px ${s.color}22`}}} onMouseLeave={(e)=>{if(!isMobile){e.currentTarget.style.transform="translateY(0)"; e.currentTarget.style.boxShadow="none"}}}><div style={{ fontSize:isMobile?22:28, fontWeight:900, color:s.color }}>{s.value}</div><div style={{ fontSize:isMobile?12:13, color:C.textMuted, marginTop:isMobile?6:8 }}>{s.label}</div></div>)}
       </div>
-      <button onClick={()=>onNav("report")} style={{ width:"100%", background:`linear-gradient(135deg,${C.purpleSoft},${C.accentSoft})`, border:`1px solid ${C.purple}33`, borderRadius:14, padding:"14px 16px", cursor:"pointer", display:"flex", alignItems:"center", gap:12, marginBottom:22 }}>
-        <div style={{ fontSize:24 }}>📊</div>
-        <div style={{ flex:1, textAlign:"left" }}><div style={{ fontSize:14, fontWeight:700, color:C.text }}>Performans Raporu</div><div style={{ fontSize:11, color:C.textMuted, marginTop:1 }}>Öğretmen bazlı dönemlik görev özeti</div></div>
-        <div style={{ color:C.purple, fontSize:18 }}>›</div>
+      <button onClick={()=>onNav("report")} style={{ width:"100%", background:`linear-gradient(135deg,${C.purpleSoft},${C.accentSoft})`, border:`1px solid ${C.purple}33`, borderRadius:14, padding:isMobile?"14px 16px":"18px 24px", cursor:"pointer", display:"flex", alignItems:"center", gap:12, marginBottom:isMobile?22:32, transition:"all 0.2s" }} onMouseEnter={(e)=>{if(!isMobile) e.currentTarget.style.background=`linear-gradient(135deg,${C.purple}22,${C.accent}22)`}} onMouseLeave={(e)=>{if(!isMobile) e.currentTarget.style.background=`linear-gradient(135deg,${C.purpleSoft},${C.accentSoft})`}}>
+        <div style={{ fontSize:isMobile?20:24 }}>📊</div>
+        <div style={{ flex:1, textAlign:"left" }}><div style={{ fontSize:isMobile?14:15, fontWeight:700, color:C.text }}>Performans Raporu</div><div style={{ fontSize:isMobile?11:12, color:C.textMuted, marginTop:2 }}>Öğretmen bazlı dönemlik görev özeti</div></div>
+        <div style={{ color:C.purple, fontSize:isMobile?16:18 }}>›</div>
       </button>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
-        <div style={{ fontSize:14, fontWeight:700, color:C.text }}>Yaklaşan Görevler</div>
-        <button onClick={()=>onNav("tasks")} style={{ background:"none", border:"none", color:C.accent, fontSize:12, cursor:"pointer", fontWeight:600 }}>Tümünü Gör →</button>
+        <div style={{ fontSize:isMobile?14:16, fontWeight:700, color:C.text }}>Yaklaşan Görevler</div>
+        <button onClick={()=>onNav("tasks")} style={{ background:"none", border:"none", color:C.accent, fontSize:isMobile?11:13, cursor:"pointer", fontWeight:600 }}>Tümünü Gör →</button>
       </div>
-      <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:22 }}>
+      <div style={{ display:"flex", flexDirection:"column", gap:isMobile?8:12, marginBottom:isMobile?22:32 }}>
         {urgent.length===0&&<div style={{ textAlign:"center", color:C.textMuted, fontSize:13, padding:20 }}>Bekleyen görev yok 🎉</div>}
-        {urgent.map(task=>{const sc=STATUS[task.status];const dl=daysLeft(task.dueDate);const cat=cats.find(c=>c.tasks.some(t=>t.id===task.id));return(<div key={task.id} onClick={()=>onTask(task)} style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:"11px 14px", cursor:"pointer", display:"flex", gap:10, alignItems:"center" }}><div style={{ fontSize:20 }}>{cat?.icon}</div><div style={{ flex:1, minWidth:0 }}><div style={{ fontSize:13, fontWeight:600, color:C.text, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{task.title}</div><div style={{ fontSize:11, color:C.textMuted, marginTop:1 }}>{cat?.title}</div></div><div style={{ textAlign:"right", flexShrink:0 }}><Badge label={sc.label} color={sc.color} bg={sc.bg}/><div style={{ fontSize:10, color:dl<0?C.red:dl<=3?C.yellow:C.textMuted, marginTop:3, fontWeight:600 }}>{dl<0?`${Math.abs(dl)}g geçti`:dl===0?"Bugün!":`${dl}g kaldı`}</div></div></div>);})}
+        {urgent.map(task=>{const sc=STATUS[task.status];const dl=daysLeft(task.dueDate);const cat=cats.find(c=>c.tasks.some(t=>t.id===task.id));return(<div key={task.id} onClick={()=>onTask(task)} style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:isMobile?"11px 14px":"16px 18px", cursor:"pointer", display:"flex", gap:isMobile?10:12, alignItems:"center", transition:"all 0.2s" }} onMouseEnter={(e)=>{if(!isMobile){e.currentTarget.style.background=C.surface; e.currentTarget.style.transform="translateX(4px)"}}} onMouseLeave={(e)=>{if(!isMobile){e.currentTarget.style.background=C.card; e.currentTarget.style.transform="translateX(0)"}}}><div style={{ fontSize:isMobile?18:20 }}>{cat?.icon}</div><div style={{ flex:1, minWidth:0 }}><div style={{ fontSize:isMobile?13:14, fontWeight:600, color:C.text, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{task.title}</div><div style={{ fontSize:isMobile?11:12, color:C.textMuted, marginTop:2 }}>{cat?.title}</div></div><div style={{ textAlign:"right", flexShrink:0 }}><Badge label={sc.label} color={sc.color} bg={sc.bg}/><div style={{ fontSize:10, color:dl<0?C.red:dl<=3?C.yellow:C.textMuted, marginTop:3, fontWeight:600 }}>{dl<0?`${Math.abs(dl)}g geçti`:dl===0?"Bugün!":`${dl}g kaldı`}</div></div></div>);})}
       </div>
-      <div style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:10 }}>Kategoriler</div>
-      <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-        {cats.map(cat=>{const done=cat.tasks.filter(t=>t.status==="tamamlandı").length;const pct=cat.tasks.length>0?Math.round((done/cat.tasks.length)*100):0;return(<div key={cat.id} onClick={()=>onCat(cat)} style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:"13px 16px", cursor:"pointer", display:"flex", alignItems:"center", gap:12 }}><div style={{ width:40, height:40, borderRadius:12, background:`${cat.color}22`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, flexShrink:0 }}>{cat.icon}</div><div style={{ flex:1 }}><div style={{ fontSize:14, fontWeight:700, color:C.text }}>{cat.title}</div><div style={{ fontSize:11, color:C.textMuted, marginTop:2 }}>{done}/{cat.tasks.length} tamamlandı</div><div style={{ height:4, background:C.border, borderRadius:2, marginTop:6, overflow:"hidden" }}><div style={{ height:"100%", width:`${pct}%`, background:cat.color, borderRadius:2 }}/></div></div><div style={{ color:C.textDim, fontSize:18 }}>›</div></div>);})}
+      <div style={{ fontSize:isMobile?14:16, fontWeight:700, color:C.text, marginBottom:10 }}>Kategoriler</div>
+      <div style={{ display:"flex", flexDirection:"column", gap:isMobile?8:12 }}>
+        {cats.map(cat=>{const done=cat.tasks.filter(t=>t.status==="tamamlandı").length;const pct=cat.tasks.length>0?Math.round((done/cat.tasks.length)*100):0;return(<div key={cat.id} onClick={()=>onCat(cat)} style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:isMobile?"13px 16px":"16px 20px", cursor:"pointer", display:"flex", alignItems:"center", gap:isMobile?12:14, transition:"all 0.2s" }} onMouseEnter={(e)=>{if(!isMobile) e.currentTarget.style.background=C.surface}} onMouseLeave={(e)=>{if(!isMobile) e.currentTarget.style.background=C.card}}><div style={{ width:isMobile?36:44, height:isMobile?36:44, borderRadius:12, background:`${cat.color}22`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:isMobile?18:22, flexShrink:0 }}>{cat.icon}</div><div style={{ flex:1 }}><div style={{ fontSize:isMobile?14:15, fontWeight:700, color:C.text }}>{cat.title}</div><div style={{ fontSize:isMobile?11:12, color:C.textMuted, marginTop:isMobile?2:4 }}>{done}/{cat.tasks.length} tamamlandı</div><div style={{ height:4, background:C.border, borderRadius:2, marginTop:isMobile?6:8, overflow:"hidden" }}><div style={{ height:"100%", width:`${pct}%`, background:cat.color, borderRadius:2, transition:"width 0.3s" }}/></div></div><div style={{ color:C.textDim, fontSize:isMobile?16:18 }}>›</div></div>);})}
       </div>
     </div>
   );
@@ -1024,7 +1130,7 @@ function MessagesScreen({ messages, onBack, onRead, onDel }) {
 }
 
 // ─── ÖĞRETMEN PANELİ ─────────────────────────────────────────
-function TeacherPanel({ session, onLogout }) {
+function TeacherPanel({ session, onLogout, isMobile }) {
   const { user, schoolCode, school } = session;
   const tid = user.teacherId || user.id;
   const [screen, setScreen] = useState("myTasks");
@@ -1270,8 +1376,8 @@ export default function App() {
   // ─── SESSION KONTROLÜ ───────────────────────────
   // Giriş yapılmışsa direkt panele git
   if (session) {
-    if (session.role === "teacher") return <TeacherPanel session={session} onLogout={handleLogout} />;
-    return <AdminPanel session={session} onLogout={handleLogout} />;
+    if (session.role === "teacher") return <TeacherPanel session={session} onLogout={handleLogout} isMobile={isMobile} />;
+    return <AdminPanel session={session} onLogout={handleLogout} isMobile={isMobile} />;
   }
 
   // ─── DESKTOP WEB LOGIN SAYFASI ───────────────────────────
