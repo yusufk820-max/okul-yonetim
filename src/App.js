@@ -607,7 +607,26 @@ function AdminPanel({ session, onLogout, isMobile }) {
         <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 390, background: C.surface, borderTop: `1px solid ${C.border}`, display: "flex" }}>
           {tabs.slice(0, 3).map(tab => {
             const active = screen === tab.id || (tab.id === "tasks" && ["taskDetail", "catDetail", "addTask", "addCat"].includes(screen)) || (tab.id === "teachers" && ["teacherDetail", "addTeacher"].includes(screen));
-            return <button key={tab.id} onClick={() => setScreen(tab.id)} style={{ flex: 1, background: "none", border: "none", padding: "10px 0 12px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }} onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.9"; }} onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; }}><span style={{ fontSize: 20, opacity: active ? 1 : 0.5, transition: "all 0.2s" }}>{tab.icon}</span><span style={{ fontSize: 10, color: active ? C.accent : C.textMuted, fontWeight: active ? 700 : 600, transition: "all 0.2s" }}>{tab.label}</span></button>;
+            
+            // Custom SVG icons
+            const iconMap = {
+              dashboard: <svg viewBox="0 0 24 24" width="24" height="24" fill="white"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>,
+              tasks: <svg viewBox="0 0 24 24" width="24" height="24" fill="white"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>,
+              teachers: <svg viewBox="0 0 24 24" width="24" height="24" fill="white"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>,
+            };
+            
+            const colorMap = {
+              dashboard: "#4f8ef7",  // Mavi
+              tasks: "#34d399",      // Yeşil
+              teachers: "#a78bfa",   // Mor
+            };
+            
+            return <button key={tab.id} onClick={() => setScreen(tab.id)} style={{ flex: 1, background: "none", border: "none", padding: "10px 0 12px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }} onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.9"; }} onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; }}>
+              <div style={{ width: 48, height: 48, borderRadius: 12, background: active ? colorMap[tab.id] : C.card, display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s", opacity: active ? 1 : 0.6 }}>
+                {iconMap[tab.id]}
+              </div>
+              <span style={{ fontSize: 10, color: active ? C.accent : C.textMuted, fontWeight: active ? 700 : 600, transition: "all 0.2s" }}>{tab.label}</span>
+            </button>;
           })}
         </div>
       )}
@@ -1335,7 +1354,23 @@ function TeacherPanel({ session, onLogout, isMobile }) {
 
       {isMobile && (
         <div style={{ position:"fixed", bottom:0, left:"50%", transform:"translateX(-50%)", width:"100%", maxWidth:390, background:C.surface, borderTop:`1px solid ${C.border}`, display:"flex" }}>
-          {[{id:"myTasks",icon:"📋",label:"Görevlerim"},{id:"contact",icon:"✉",label:"Mesaj"},{id:"profile",icon:"👤",label:"Profil"}].map(tab=>{ const active=screen===tab.id||(tab.id==="myTasks"&&screen==="taskView"); return <button key={tab.id} onClick={()=>setScreen(tab.id)} style={{ flex:1, background:"none", border:"none", padding:"10px 0 12px", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:3 }}><span style={{ fontSize:20, opacity:active?1:0.6, filter:active?"none":"" }}>{tab.icon}</span><span style={{ fontSize:10, color:active?C.accent:C.textMuted, fontWeight:active?700:600 }}>{tab.label}</span></button>; })}
+          {[{id:"myTasks",icon:"📋",label:"Görevlerim"},{id:"contact",icon:"✉",label:"Mesaj"},{id:"profile",icon:"👤",label:"Profil"}].map(tab=>{ 
+            const active=screen===tab.id||(tab.id==="myTasks"&&screen==="taskView");
+            
+            // Custom SVG icons
+            const iconMap = {
+              myTasks: <svg viewBox="0 0 24 24" width="24" height="24" fill="white"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>,
+              contact: <svg viewBox="0 0 24 24" width="24" height="24" fill="white"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>,
+              profile: <svg viewBox="0 0 24 24" width="24" height="24" fill="white"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>,
+            };
+            
+            const colorMap = {
+              myTasks: "#34d399",    // Yeşil
+              contact: "#f59e0b",    // Turuncu
+              profile: "#8b5cf6",    // Mor
+            };
+            
+            return <button key={tab.id} onClick={()=>setScreen(tab.id)} style={{ flex:1, background:"none", border:"none", padding:"8px 0 12px", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:6 }}><div style={{ width:44, height:44, borderRadius:10, background:active?colorMap[tab.id]:C.card, display:"flex", alignItems:"center", justifyContent:"center", transition:"all 0.2s", opacity:active?1:0.6 }}>{iconMap[tab.id]}</div><span style={{ fontSize:10, color:active?C.accent:C.textMuted, fontWeight:active?700:600 }}>{tab.label}</span></button>; })};
         </div>
       )}
       {isMobile && <div style={{ height:64 }} />}
