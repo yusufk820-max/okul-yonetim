@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 
-export default function Landing({ onLogin, onSetup }) {
+export default function Landing({ onLogin, onSetup, language = "tr", onLanguageChange }) {
   const [openFaq, setOpenFaq] = useState(null);
   const [modal, setModal] = useState(null); // "iletisim" | "yardim" | null
   const starsRef = useRef(null);
@@ -70,7 +70,11 @@ export default function Landing({ onLogin, onSetup }) {
               <li><button onClick={() => scrollTo("fiyat")}>Fiyat</button></li>
               <li><button onClick={() => scrollTo("sss")}>SSS</button></li>
             </ul>
-            <div style={{ display: "flex", gap: 12 }}>
+            <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+              <div style={{ display: "flex", gap: 6 }}>
+                <button onClick={() => onLanguageChange && onLanguageChange("tr")} style={{ padding: "6px 12px", borderRadius: 8, border: language === "tr" ? "2px solid #4f8ef7" : "1px solid rgba(255,255,255,0.2)", background: language === "tr" ? "rgba(79,142,247,0.12)" : "transparent", color: language === "tr" ? "#4f8ef7" : "#e8eaf0", fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }}>🇹🇷 TR</button>
+                <button onClick={() => onLanguageChange && onLanguageChange("en")} style={{ padding: "6px 12px", borderRadius: 8, border: language === "en" ? "2px solid #4f8ef7" : "1px solid rgba(255,255,255,0.2)", background: language === "en" ? "rgba(79,142,247,0.12)" : "transparent", color: language === "en" ? "#4f8ef7" : "#e8eaf0", fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }}>🇬🇧 EN</button>
+              </div>
               <button className="btn-soft" onClick={onLogin}>Kurum Girişi</button>
               <button className="btn-grad" onClick={onSetup}>Okul Kaydı</button>
             </div>
