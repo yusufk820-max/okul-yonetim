@@ -462,6 +462,8 @@ function AdminPanel({ session, onLogout, isMobile }) {
     { id:"dashboard", label:"Ana Sayfa", icon:"⊞" },
     { id:"tasks",     label:"Görevler",  icon:"📋" },
     { id:"teachers",  label:"Öğretmenler", icon:"👥" },
+    { id:"messages",  label:"Mesajlar",  icon:"✉" },
+    { id:"profile",   label:"Profil",    icon:"👤" },
   ];
 
   return (
@@ -515,7 +517,7 @@ function AdminPanel({ session, onLogout, isMobile }) {
                     width: "100%",
                     background: active ? C.accentSoft : "transparent",
                     border: "none",
-                    color: active ? C.accent : C.textMuted,
+                    color: active ? C.accent : C.green,
                     borderLeft: `3px solid ${active ? C.accent : "transparent"}`,
                     padding: "12px 16px",
                     textAlign: "left",
@@ -603,7 +605,7 @@ function AdminPanel({ session, onLogout, isMobile }) {
         <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 390, background: C.surface, borderTop: `1px solid ${C.border}`, display: "flex" }}>
           {tabs.map(tab => {
             const active = screen === tab.id || (tab.id === "tasks" && ["taskDetail", "catDetail", "addTask", "addCat"].includes(screen)) || (tab.id === "teachers" && ["teacherDetail", "addTeacher"].includes(screen));
-            return <button key={tab.id} onClick={() => setScreen(tab.id)} style={{ flex: 1, background: "none", border: "none", padding: "10px 0 12px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}><span style={{ fontSize: 20, filter: active ? "none" : "grayscale(1) opacity(0.5)" }}>{tab.icon}</span><span style={{ fontSize: 10, color: active ? C.accent : C.textDim, fontWeight: active ? 700 : 400 }}>{tab.label}</span></button>;
+            return <button key={tab.id} onClick={() => setScreen(tab.id)} style={{ flex: 1, background: "none", border: "none", padding: "10px 0 12px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }} onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.9"; }} onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; }}><span style={{ fontSize: 20, opacity: active ? 1 : 0.5, transition: "all 0.2s" }}>{tab.icon}</span><span style={{ fontSize: 10, color: active ? C.accent : C.textMuted, fontWeight: active ? 700 : 600, transition: "all 0.2s" }}>{tab.label}</span></button>;
           })}
         </div>
       )}
