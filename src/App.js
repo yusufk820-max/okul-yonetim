@@ -29,6 +29,53 @@ const PRIORITY = {
 const AVATAR_COLORS = [C.accent, C.purple, "#34d399", "#f97316", "#ec4899"];
 const REMINDER_OPTS = [5, 4, 3, 2, 1];
 
+// ─── PLANLAR ─────────────────────────────────────────────────
+const PLANS = {
+  free:     { label: "🌱 Ücretsiz", maxTeachers: 10,       maxCategories: 4,        maxTasks: 25,       rapor: false },
+  okul:     { label: "🏫 Okul",     maxTeachers: 25,       maxCategories: Infinity, maxTasks: Infinity, rapor: false },
+  okulplus: { label: "🚀 Okul+",    maxTeachers: Infinity, maxCategories: Infinity, maxTasks: Infinity, rapor: true  },
+};
+const planOf = (school) => PLANS[school?.plan] || PLANS.free;
+const planKey = (school) => (PLANS[school?.plan] ? school.plan : "free");
+const limitText = (n) => n === Infinity ? "Sınırsız" : n;
+
+// ─── DÖNEMLER ────────────────────────────────────────────────
+// Türkiye okul takvimi: Eylül–Ocak = Güz, Şubat–Haziran = Bahar
+function termOfDate(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  const m = d.getMonth() + 1; // 1-12
+  const y = d.getFullYear();
+  if (m >= 9 && m <= 12) return { key: `${y}-guz`, label: `${y}-${y+1} Güz`, sortYear: y, sortHalf: 0 };
+  if (m === 1)           return { key: `${y-1}-guz`, label: `${y-1}-${y} Güz`, sortYear: y-1, sortHalf: 0 };
+  return { key: `${y}-bahar`, label: `${y-1}-${y} Bahar`, sortYear: y-1, sortHalf: 1 }; // Şubat-Haziran
+}
+
+// Bir öğretmenin görev listesinden performans özeti çıkarır
+function teacherStats(tasks, teacherId) {
+  let assigned = 0, onTime = 0, late = 0, pending = 0, overdue = 0;
+  const now = new Date(); now.setHours(0,0,0,0);
+  for (const t of tasks) {
+    if (!(t.teacherIds || []).includes(teacherId)) continue;
+    assigned++;
+    const completions = t.completions || {};
+    const completedAt = completions[teacherId];
+    const isCompleted = completedAt || (t.completedTeacherIds || []).includes(teacherId);
+    if (isCompleted) {
+      // Tamamlanma zamanı biliniyorsa zamanında mı bak; bilinmiyorsa zamanında say
+      if (completedAt && t.dueDate) {
+        const done = new Date(completedAt); const due = new Date(t.dueDate); due.setHours(23,59,59,999);
+        if (done <= due) onTime++; else late++;
+      } else onTime++;
+    } else {
+      // Tamamlanmamış: tarihi geçtiyse gecikmiş/yapılmadı, geçmediyse bekliyor
+      if (t.dueDate && new Date(t.dueDate) < now) overdue++;
+      else pending++;
+    }
+  }
+  return { assigned, onTime, late, pending, overdue };
+}
+
 // ─── YARDIMCILAR ─────────────────────────────────────────────
 const fmtDate = d => { if (!d) return ""; const [y,m,day] = d.split("-"); return `${day}.${m}.${y}`; };
 const daysLeft = d => { const n = new Date(); n.setHours(0,0,0,0); return Math.ceil((new Date(d)-n)/86400000); };
@@ -180,6 +227,7 @@ function SchoolSetup({ onDone, onBack }) {
       if (existing) { setError("Bu kurum kodu zaten kayıtlı."); setLoading(false); return; }
       await dbSet(`schools/${form.schoolCode}`, {
         name: form.schoolName, city: form.city, createdAt: new Date().toISOString(),
+        plan: "free",
         users: { admin1: { username:"mudur", password:form.adminPassword, role:"admin", name:form.adminName, title:"Okul Müdürü" } },
         categories: {
           evrak:  { title:"Evrak Teslimi",            icon:"📂", color:"#4f8ef7", order:1 },
@@ -287,13 +335,26 @@ function AdminPanel({ session, onLogout }) {
 
   const handleCheck = async (taskId, completedTeacherIds) => {
     const cat = findCat(taskId); if (!cat) return;
-    await dbUpdate(`schools/${schoolCode}/categories/${cat.id}/tasks/${taskId}`, { completedTeacherIds });
-    setSelTask(p => p ? {...p, completedTeacherIds} : p);
+    const task = cat.tasks.find(t => t.id === taskId);
+    const prev = task?.completions || {};
+    const now = new Date().toISOString();
+    const completions = {};
+    for (const tid of completedTeacherIds) {
+      completions[tid] = prev[tid] || now; // yeni işaretlenene şimdiki zaman, eskisini koru
+    }
+    await dbUpdate(`schools/${schoolCode}/categories/${cat.id}/tasks/${taskId}`, { completedTeacherIds, completions });
+    setSelTask(p => p ? {...p, completedTeacherIds, completions} : p);
     reload();
   };
 
   const handleAddTask = async (catId, form) => {
-    await dbPush(`schools/${schoolCode}/categories/${catId}/tasks`, { ...form, status:"bekliyor", completedTeacherIds:[], createdAt:new Date().toISOString() });
+    const limit = planOf(data).maxTasks;
+    if (allTasks.length >= limit) {
+      showToast(`${planOf(data).label} planında en fazla ${limit} görev oluşturulabilir.`, C.red);
+      setScreen("upgrade");
+      return;
+    }
+    await dbPush(`schools/${schoolCode}/categories/${catId}/tasks`, { ...form, status:"bekliyor", completedTeacherIds:[], completions:{}, createdAt:new Date().toISOString() });
     showToast(`Görev ${form.teacherIds.length} öğretmene atandı! 🔔`);
     reload();
   };
@@ -305,6 +366,12 @@ function AdminPanel({ session, onLogout }) {
   };
 
   const handleAddTeacher = async (form) => {
+    const limit = planOf(data).maxTeachers;
+    if (teachers.length >= limit) {
+      showToast(`${planOf(data).label} planında en fazla ${limit} öğretmen eklenebilir.`, C.red);
+      setScreen("upgrade");
+      return;
+    }
     const initials = form.name.split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2);
     const tid = await dbPush(`schools/${schoolCode}/teachers`, { ...form, avatar:initials });
     await dbSet(`schools/${schoolCode}/users/${tid}`, { username:form.username, password:form.password, role:"teacher", name:form.name, teacherId:tid, mustChangePassword:true });
@@ -321,6 +388,12 @@ function AdminPanel({ session, onLogout }) {
   };
 
   const handleAddCat = async (form) => {
+    const limit = planOf(data).maxCategories;
+    if (categories.length >= limit) {
+      showToast(`${planOf(data).label} planında en fazla ${limit} kategori oluşturulabilir.`, C.red);
+      setScreen("upgrade");
+      return;
+    }
     const id = "cat_" + Date.now();
     const order = categories.length + 1;
     await dbSet(`schools/${schoolCode}/categories/${id}`, { title: form.title, icon: form.icon, color: form.color, order });
@@ -338,6 +411,12 @@ function AdminPanel({ session, onLogout }) {
 
   const handleReadMessage = async (msgId) => {
     await dbUpdate(`schools/${schoolCode}/messages/${msgId}`, { read: true });
+    reload();
+  };
+
+  const handleChangePlan = async (newPlan) => {
+    await dbUpdate(`schools/${schoolCode}`, { plan: newPlan });
+    showToast(`Plan "${PLANS[newPlan].label}" olarak güncellendi.`);
     reload();
   };
 
@@ -363,8 +442,8 @@ function AdminPanel({ session, onLogout }) {
           <div><div style={{ fontSize:13, fontWeight:800, color:C.text }}>{school.name}</div><div style={{ fontSize:10, color:C.textMuted }}>{user.title} · {schoolCode}</div></div>
         </div>
         <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+          <button onClick={()=>setScreen("upgrade")} style={{ background:planKey(data)==="free"?C.surface:C.purpleSoft, border:`1px solid ${planKey(data)==="free"?C.border:C.purple+"55"}`, borderRadius:20, padding:"3px 10px", fontSize:10, color:planKey(data)==="free"?C.textMuted:C.purple, fontWeight:700, cursor:"pointer" }}>{planOf(data).label}</button>
           <button onClick={()=>setScreen("messages")} style={{ position:"relative", background:C.surface, border:`1px solid ${C.border}`, borderRadius:8, padding:"4px 9px", fontSize:14, cursor:"pointer" }}>✉{unreadCount>0 && <span style={{ position:"absolute", top:-6, right:-6, background:C.red, color:"#fff", borderRadius:10, fontSize:9, fontWeight:700, minWidth:16, height:16, display:"flex", alignItems:"center", justifyContent:"center", padding:"0 3px" }}>{unreadCount}</span>}</button>
-          {allTasks.filter(t=>t.status==="gecikmiş").length>0 && <div style={{ background:C.redSoft, border:`1px solid ${C.red}44`, borderRadius:20, padding:"3px 9px", fontSize:10, color:C.red, fontWeight:700 }}>🔔 {allTasks.filter(t=>t.status==="gecikmiş").length} Gecikmiş</div>}
           <button onClick={onLogout} style={{ background:C.surface, border:`1px solid ${C.border}`, color:C.textMuted, borderRadius:8, padding:"4px 10px", fontSize:11, cursor:"pointer" }}>Çıkış</button>
         </div>
       </div>
@@ -380,6 +459,8 @@ function AdminPanel({ session, onLogout }) {
         {screen==="addTeacher"    && <AddTeacher onAdd={handleAddTeacher} onBack={()=>setScreen("teachers")} />}
         {screen==="teacherDetail" && selTeacher  && <TeacherDetail teacher={selTeacher} cats={categories} onBack={()=>setScreen("teachers")} onNav={setScreen} onTask={t=>{setSelTask(t);setScreen("taskDetail");}} onDel={handleDelTeacher} />}
         {screen==="messages"      && <MessagesScreen messages={messages} onBack={()=>setScreen("dashboard")} onRead={handleReadMessage} onDel={handleDelMessage} />}
+        {screen==="report"        && <ReportScreen teachers={teachers} allTasks={allTasks} school={data} onBack={()=>setScreen("dashboard")} onUpgrade={()=>setScreen("upgrade")} />}
+        {screen==="upgrade"       && <PlanScreen school={data} teachers={teachers} categories={categories} allTasks={allTasks} onBack={()=>setScreen("dashboard")} onChangePlan={handleChangePlan} />}
       </div>
 
       {toast && <div style={{ position:"fixed", bottom:80, left:"50%", transform:"translateX(-50%)", background:toast.color, color:"#fff", borderRadius:12, padding:"10px 18px", fontSize:13, fontWeight:600, boxShadow:"0 4px 20px rgba(0,0,0,0.4)", zIndex:100, whiteSpace:"nowrap" }}>{toast.msg}</div>}
@@ -410,6 +491,11 @@ function Dashboard({ cats, teachers, allTasks, school, onNav, onTask, onCat }) {
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:22 }}>
         {stats.map(s=><div key={s.label} style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:"14px 16px", borderLeft:`3px solid ${s.color}` }}><div style={{ fontSize:24, fontWeight:900, color:s.color }}>{s.value}</div><div style={{ fontSize:12, color:C.textMuted, marginTop:2 }}>{s.label}</div></div>)}
       </div>
+      <button onClick={()=>onNav("report")} style={{ width:"100%", background:`linear-gradient(135deg,${C.purpleSoft},${C.accentSoft})`, border:`1px solid ${C.purple}33`, borderRadius:14, padding:"14px 16px", cursor:"pointer", display:"flex", alignItems:"center", gap:12, marginBottom:22 }}>
+        <div style={{ fontSize:24 }}>📊</div>
+        <div style={{ flex:1, textAlign:"left" }}><div style={{ fontSize:14, fontWeight:700, color:C.text }}>Performans Raporu</div><div style={{ fontSize:11, color:C.textMuted, marginTop:1 }}>Öğretmen bazlı dönemlik görev özeti</div></div>
+        <div style={{ color:C.purple, fontSize:18 }}>›</div>
+      </button>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
         <div style={{ fontSize:14, fontWeight:700, color:C.text }}>Yaklaşan Görevler</div>
         <button onClick={()=>onNav("tasks")} style={{ background:"none", border:"none", color:C.accent, fontSize:12, cursor:"pointer", fontWeight:600 }}>Tümünü Gör →</button>
@@ -427,8 +513,145 @@ function Dashboard({ cats, teachers, allTasks, school, onNav, onTask, onCat }) {
 }
 
 
+// ─── PERFORMANS RAPORU (Okul+) ───────────────────────────────
+function ReportScreen({ teachers, allTasks, school, onBack, onUpgrade }) {
+  const izinli = planOf(school).rapor;
+
+  // Mevcut dönemleri görevlerin tarihlerinden çıkar
+  const termsMap = {};
+  for (const t of allTasks) {
+    const term = termOfDate(t.dueDate);
+    if (term) termsMap[term.key] = term;
+  }
+  const terms = Object.values(termsMap).sort((a,b)=> b.sortYear-a.sortYear || a.sortHalf-b.sortHalf);
+  const [selTerm, setSelTerm] = useState("all");
+
+  if (!izinli) return (
+    <div style={{ padding:"0 16px 24px" }}>
+      <button onClick={onBack} style={{ background:"none", border:"none", color:C.accent, fontSize:14, cursor:"pointer", marginBottom:16, padding:0, fontWeight:600 }}>← Geri</button>
+      <div style={{ background:C.card, border:`1px solid ${C.purple}33`, borderRadius:18, padding:28, textAlign:"center", marginTop:20 }}>
+        <div style={{ fontSize:44, marginBottom:14 }}>🔒</div>
+        <div style={{ fontSize:18, fontWeight:800, color:C.text, marginBottom:8 }}>Performans Raporu</div>
+        <div style={{ fontSize:13, color:C.textMuted, lineHeight:1.7, marginBottom:22 }}>Öğretmen bazlı dönemlik görev raporları <strong style={{color:C.purple}}>Okul+</strong> planına özeldir. Her öğretmenin atanan, zamanında tamamlanan ve geciken görevlerini dönem dönem görüntüleyin.</div>
+        <button onClick={onUpgrade} style={{ width:"100%", background:`linear-gradient(135deg,${C.accent},#7c3aed)`, border:"none", color:"#fff", borderRadius:12, padding:13, fontSize:15, fontWeight:700, cursor:"pointer" }}>Okul+ Planına Geç 🚀</button>
+      </div>
+    </div>
+  );
+
+  // Seçili döneme göre görevleri filtrele
+  const filtered = selTerm === "all" ? allTasks : allTasks.filter(t => termOfDate(t.dueDate)?.key === selTerm);
+
+  return (
+    <div style={{ padding:"0 16px 24px" }}>
+      <button onClick={onBack} style={{ background:"none", border:"none", color:C.accent, fontSize:14, cursor:"pointer", marginBottom:16, padding:0, fontWeight:600 }}>← Geri</button>
+      <div style={{ fontSize:22, fontWeight:800, color:C.text, marginBottom:4 }}>📊 Performans Raporu</div>
+      <div style={{ fontSize:13, color:C.textMuted, marginBottom:18 }}>Öğretmen bazlı görev özeti</div>
+
+      {/* Dönem seçici */}
+      <div style={{ display:"flex", gap:8, overflowX:"auto", marginBottom:20, paddingBottom:4 }}>
+        <button onClick={()=>setSelTerm("all")} style={{ flexShrink:0, background:selTerm==="all"?C.accent:C.card, border:`1px solid ${selTerm==="all"?C.accent:C.border}`, color:selTerm==="all"?"#fff":C.textMuted, borderRadius:20, padding:"7px 16px", fontSize:12, fontWeight:700, cursor:"pointer" }}>Tüm Zamanlar</button>
+        {terms.map(term=>(
+          <button key={term.key} onClick={()=>setSelTerm(term.key)} style={{ flexShrink:0, background:selTerm===term.key?C.accent:C.card, border:`1px solid ${selTerm===term.key?C.accent:C.border}`, color:selTerm===term.key?"#fff":C.textMuted, borderRadius:20, padding:"7px 16px", fontSize:12, fontWeight:700, cursor:"pointer", whiteSpace:"nowrap" }}>{term.label}</button>
+        ))}
+      </div>
+
+      {teachers.length===0 ? (
+        <div style={{ textAlign:"center", padding:48, color:C.textMuted }}><div style={{ fontSize:40, marginBottom:12 }}>👥</div><div style={{ fontSize:15, fontWeight:700 }}>Henüz öğretmen yok</div></div>
+      ) : (
+        <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+          {teachers.map(teacher=>{
+            const s = teacherStats(filtered, teacher.id);
+            const oran = s.assigned>0 ? Math.round((s.onTime/s.assigned)*100) : 0;
+            return (
+              <div key={teacher.id} style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:16, padding:16 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:14 }}>
+                  <Avatar initials={teacher.avatar} size={42} idx={teacher.idx||0}/>
+                  <div style={{ flex:1 }}><div style={{ fontSize:15, fontWeight:800, color:C.text }}>{teacher.name}</div><div style={{ fontSize:12, color:C.textMuted }}>{teacher.branch} · {s.assigned} görev atandı</div></div>
+                  <div style={{ textAlign:"right" }}><div style={{ fontSize:20, fontWeight:900, color:oran>=70?C.green:oran>=40?C.yellow:C.red }}>%{oran}</div><div style={{ fontSize:10, color:C.textDim }}>zamanında</div></div>
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:6 }}>
+                  {[{l:"Atanan",v:s.assigned,c:C.accent},{l:"Zamanında",v:s.onTime,c:C.green},{l:"Geç/Yapılmadı",v:s.late+s.overdue,c:C.red},{l:"Bekliyor",v:s.pending,c:C.yellow}].map(x=>(
+                    <div key={x.l} style={{ background:C.surface, borderRadius:10, padding:"8px 4px", textAlign:"center", borderTop:`2px solid ${x.c}` }}><div style={{ fontSize:17, fontWeight:900, color:x.c }}>{x.v}</div><div style={{ fontSize:8.5, color:C.textMuted, marginTop:2, lineHeight:1.2 }}>{x.l}</div></div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <div style={{ fontSize:11, color:C.textDim, marginTop:18, textAlign:"center", lineHeight:1.6 }}>"Zamanında" oranı, tamamlanan görevlerin son tarihinden önce işaretlenenlerinin yüzdesidir. Eski görevlerde tamamlanma zamanı kayıtlı değilse zamanında sayılır.</div>
+    </div>
+  );
+}
+
+// ─── PLAN YÖNETİMİ ───────────────────────────────────────────
+function PlanScreen({ school, teachers, categories, allTasks, onBack, onChangePlan }) {
+  const current = planKey(school);
+  const [confirm, setConfirm] = useState(null);
+  const planList = [
+    { key:"free",     fiyat:"₺0",          per:"sonsuza kadar", renk:C.green },
+    { key:"okul",     fiyat:"₺2.990",      per:"okul / yıl",    renk:C.accent },
+    { key:"okulplus", fiyat:"₺5.990",      per:"okul / yıl",    renk:C.purple },
+  ];
+  const feats = {
+    free:     ["10 öğretmene kadar","4 kategori · 25 görev","Görev atama ve takip","Önemli gün hatırlatıcısı"],
+    okul:     ["25 öğretmene kadar","Sınırsız kategori ve görev","Öğretmene bildirim","Gecikme uyarıları"],
+    okulplus: ["Sınırsız öğretmen","Okul planının tamamı","Performans raporları 📊","Geçmiş dönem arşivi"],
+  };
+
+  return (
+    <div style={{ padding:"0 16px 24px" }}>
+      <button onClick={onBack} style={{ background:"none", border:"none", color:C.accent, fontSize:14, cursor:"pointer", marginBottom:16, padding:0, fontWeight:600 }}>← Geri</button>
+      <div style={{ fontSize:22, fontWeight:800, color:C.text, marginBottom:4 }}>Plan Yönetimi</div>
+      <div style={{ fontSize:13, color:C.textMuted, marginBottom:6 }}>Mevcut planınız: <strong style={{color:C.purple}}>{planOf(school).label}</strong></div>
+
+      {/* Mevcut kullanım */}
+      <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:14, marginBottom:20, display:"flex", justifyContent:"space-around" }}>
+        {[{l:"Öğretmen",v:teachers.length,m:planOf(school).maxTeachers},{l:"Kategori",v:categories.length,m:planOf(school).maxCategories},{l:"Görev",v:allTasks.length,m:planOf(school).maxTasks}].map(x=>(
+          <div key={x.l} style={{ textAlign:"center" }}><div style={{ fontSize:16, fontWeight:900, color:x.v>=x.m?C.red:C.text }}>{x.v}<span style={{ fontSize:11, color:C.textDim }}>/{limitText(x.m)}</span></div><div style={{ fontSize:10, color:C.textMuted, marginTop:2 }}>{x.l}</div></div>
+        ))}
+      </div>
+
+      <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+        {planList.map(p=>{
+          const aktif = current===p.key;
+          return (
+            <div key={p.key} style={{ background:C.card, border:`1.5px solid ${aktif?p.renk:C.border}`, borderRadius:16, padding:18, position:"relative" }}>
+              {aktif && <div style={{ position:"absolute", top:-10, right:16, background:p.renk, color:"#fff", fontSize:10, fontWeight:700, padding:"3px 12px", borderRadius:20 }}>MEVCUT PLAN</div>}
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:12 }}>
+                <div style={{ fontSize:16, fontWeight:800, color:C.text }}>{PLANS[p.key].label}</div>
+                <div style={{ textAlign:"right" }}><span style={{ fontSize:22, fontWeight:900, color:C.text }}>{p.fiyat}</span><div style={{ fontSize:10, color:C.textDim }}>{p.per}</div></div>
+              </div>
+              <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:14 }}>
+                {feats[p.key].map(f=><div key={f} style={{ fontSize:12, color:C.textMuted, display:"flex", gap:7 }}><span style={{ color:p.renk }}>✓</span>{f}</div>)}
+              </div>
+              {!aktif && <button onClick={()=>setConfirm(p.key)} style={{ width:"100%", background:p.key==="free"?C.surface:`linear-gradient(135deg,${C.accent},#7c3aed)`, border:p.key==="free"?`1px solid ${C.border}`:"none", color:p.key==="free"?C.textMuted:"#fff", borderRadius:12, padding:11, fontSize:14, fontWeight:700, cursor:"pointer" }}>{p.key==="free"?"Ücretsiz Plana Geç":`${PLANS[p.key].label} Planına Geç`}</button>}
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ fontSize:11, color:C.textDim, marginTop:18, textAlign:"center", lineHeight:1.6 }}>Plan değişikliğinde verileriniz korunur. Ücretsiz plana geçişte limit üstü mevcut kayıtlarınız silinmez, yalnızca yeni ekleme limitleri uygulanır.</div>
+
+      {confirm && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", display:"flex", alignItems:"center", justifyContent:"center", padding:24, zIndex:200 }}>
+          <div style={{ background:C.card, borderRadius:18, padding:24, maxWidth:320, width:"100%", border:`1px solid ${C.border}` }}>
+            <div style={{ fontSize:16, fontWeight:800, color:C.text, marginBottom:10 }}>Plan değişikliği</div>
+            <div style={{ fontSize:13, color:C.textMuted, lineHeight:1.6, marginBottom:20 }}>Planınız <strong style={{color:C.purple}}>{PLANS[confirm].label}</strong> olarak güncellenecek. Onaylıyor musunuz?</div>
+            <div style={{ display:"flex", gap:10 }}>
+              <button onClick={()=>setConfirm(null)} style={{ flex:1, background:C.surface, border:`1px solid ${C.border}`, color:C.textMuted, borderRadius:10, padding:11, fontSize:13, cursor:"pointer" }}>İptal</button>
+              <button onClick={()=>{onChangePlan(confirm);setConfirm(null);}} style={{ flex:1, background:`linear-gradient(135deg,${C.accent},#7c3aed)`, border:"none", color:"#fff", borderRadius:10, padding:11, fontSize:13, fontWeight:700, cursor:"pointer" }}>Onayla</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── KATEGORİ EKLE ────────────────────────────────────────────
 const CAT_ICONS = ["📂","🏅","🎯","📝","🏆","📌","🎓","📊","🔔","📅","🌟","📋","🎨","🔧","📣"];
+const CAT_COLORS = ["#4f8ef7","#f97316","#a78bfa","#34d399","#f87171","#fbbf24","#ec4899","#06b6d4","#84cc16","#f59e0b"];
 const CAT_COLORS = ["#4f8ef7","#f97316","#a78bfa","#34d399","#f87171","#fbbf24","#ec4899","#06b6d4","#84cc16","#f59e0b"];
 
 function AddCategory({ onAdd, onBack }) {
