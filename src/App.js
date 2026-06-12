@@ -31,13 +31,23 @@ const REMINDER_OPTS = [5, 4, 3, 2, 1];
 
 // ─── PLANLAR ─────────────────────────────────────────────────
 const PLANS = {
-  free:     { label: "🌱 Ücretsiz", maxTeachers: 10,       maxCategories: 4,        maxTasks: 25,       rapor: false },
-  okul:     { label: "🏫 Okul",     maxTeachers: 25,       maxCategories: Infinity, maxTasks: Infinity, rapor: false },
-  okulplus: { label: "🚀 Okul+",    maxTeachers: Infinity, maxCategories: Infinity, maxTasks: Infinity, rapor: true  },
+  free:     { label: "🌱 Ücretsiz", rank: 0, maxTeachers: 10,       maxCategories: 4,        maxTasks: 25,       rapor: false },
+  okul:     { label: "🏫 Okul",     rank: 1, maxTeachers: 25,       maxCategories: Infinity, maxTasks: Infinity, rapor: false },
+  okulplus: { label: "🚀 Okul+",    rank: 2, maxTeachers: Infinity, maxCategories: Infinity, maxTasks: Infinity, rapor: true  },
 };
 const planOf = (school) => PLANS[school?.plan] || PLANS.free;
 const planKey = (school) => (PLANS[school?.plan] ? school.plan : "free");
 const limitText = (n) => n === Infinity ? "Sınırsız" : n;
+
+// ─── HAVALE BİLGİLERİ (BURAYI KENDİ BİLGİLERİNLE DEĞİŞTİR) ───
+const ODEME = {
+  unvan: "YUSUF KARABIYIK",
+  banka: "T.C YAPI KREDİ BANKASI A.Ş",
+  iban: "TR00 1234 5678 0000 0000 0000 00",
+  aciklama: "Okul kurum kodunuzu havale açıklamasına yazınız.",
+  iletisim: "destek@taskipro.com",
+};
+const planFiyat = { free: "₺0", okul: "₺2.990", okulplus: "₺5.990" };
 
 // ─── DÖNEMLER ────────────────────────────────────────────────
 // Türkiye okul takvimi: Eylül–Ocak = Güz, Şubat–Haziran = Bahar
@@ -414,9 +424,26 @@ function AdminPanel({ session, onLogout }) {
     reload();
   };
 
-  const handleChangePlan = async (newPlan) => {
-    await dbUpdate(`schools/${schoolCode}`, { plan: newPlan });
+  // Plan düşürme (downgrade): anında uygulanır
+  const handleDowngrade = async (newPlan) => {
+    await dbUpdate(`schools/${schoolCode}`, { plan: newPlan, planRequest: null });
     showToast(`Plan "${PLANS[newPlan].label}" olarak güncellendi.`);
+    reload();
+  };
+
+  // Plan yükseltme: talep oluşturur, onay bekler (plan DEĞİŞMEZ)
+  const handlePlanRequest = async (newPlan) => {
+    await dbUpdate(`schools/${schoolCode}`, {
+      planRequest: { plan: newPlan, requestedAt: new Date().toISOString(), by: user.name || "Yönetici" }
+    });
+    showToast("Yükseltme talebiniz alındı ✓");
+    reload();
+  };
+
+  // Talebi iptal et
+  const handleCancelRequest = async () => {
+    await dbUpdate(`schools/${schoolCode}`, { planRequest: null });
+    showToast("Talep iptal edildi.", C.red);
     reload();
   };
 
@@ -460,7 +487,7 @@ function AdminPanel({ session, onLogout }) {
         {screen==="teacherDetail" && selTeacher  && <TeacherDetail teacher={selTeacher} cats={categories} onBack={()=>setScreen("teachers")} onNav={setScreen} onTask={t=>{setSelTask(t);setScreen("taskDetail");}} onDel={handleDelTeacher} />}
         {screen==="messages"      && <MessagesScreen messages={messages} onBack={()=>setScreen("dashboard")} onRead={handleReadMessage} onDel={handleDelMessage} />}
         {screen==="report"        && <ReportScreen teachers={teachers} allTasks={allTasks} school={data} onBack={()=>setScreen("dashboard")} onUpgrade={()=>setScreen("upgrade")} />}
-        {screen==="upgrade"       && <PlanScreen school={data} teachers={teachers} categories={categories} allTasks={allTasks} onBack={()=>setScreen("dashboard")} onChangePlan={handleChangePlan} />}
+        {screen==="upgrade"       && <PlanScreen school={data} teachers={teachers} categories={categories} allTasks={allTasks} onBack={()=>setScreen("dashboard")} onDowngrade={handleDowngrade} onRequest={handlePlanRequest} onCancelRequest={handleCancelRequest} />}
       </div>
 
       {toast && <div style={{ position:"fixed", bottom:80, left:"50%", transform:"translateX(-50%)", background:toast.color, color:"#fff", borderRadius:12, padding:"10px 18px", fontSize:13, fontWeight:600, boxShadow:"0 4px 20px rgba(0,0,0,0.4)", zIndex:100, whiteSpace:"nowrap" }}>{toast.msg}</div>}
@@ -585,13 +612,17 @@ function ReportScreen({ teachers, allTasks, school, onBack, onUpgrade }) {
 }
 
 // ─── PLAN YÖNETİMİ ───────────────────────────────────────────
-function PlanScreen({ school, teachers, categories, allTasks, onBack, onChangePlan }) {
+function PlanScreen({ school, teachers, categories, allTasks, onBack, onDowngrade, onRequest, onCancelRequest }) {
   const current = planKey(school);
-  const [confirm, setConfirm] = useState(null);
+  const currentRank = PLANS[current].rank;
+  const request = school?.planRequest || null;
+  const [confirmDown, setConfirmDown] = useState(null);
+  const [reqPlan, setReqPlan] = useState(null); // havale ekranı için seçilen yükseltme planı
+
   const planList = [
-    { key:"free",     fiyat:"₺0",          per:"sonsuza kadar", renk:C.green },
-    { key:"okul",     fiyat:"₺2.990",      per:"okul / yıl",    renk:C.accent },
-    { key:"okulplus", fiyat:"₺5.990",      per:"okul / yıl",    renk:C.purple },
+    { key:"free",     per:"sonsuza kadar", renk:C.green },
+    { key:"okul",     per:"okul / yıl",    renk:C.accent },
+    { key:"okulplus", per:"okul / yıl",    renk:C.purple },
   ];
   const feats = {
     free:     ["10 öğretmene kadar","4 kategori · 25 görev","Görev atama ve takip","Önemli gün hatırlatıcısı"],
@@ -603,7 +634,17 @@ function PlanScreen({ school, teachers, categories, allTasks, onBack, onChangePl
     <div style={{ padding:"0 16px 24px" }}>
       <button onClick={onBack} style={{ background:"none", border:"none", color:C.accent, fontSize:14, cursor:"pointer", marginBottom:16, padding:0, fontWeight:600 }}>← Geri</button>
       <div style={{ fontSize:22, fontWeight:800, color:C.text, marginBottom:4 }}>Plan Yönetimi</div>
-      <div style={{ fontSize:13, color:C.textMuted, marginBottom:6 }}>Mevcut planınız: <strong style={{color:C.purple}}>{planOf(school).label}</strong></div>
+      <div style={{ fontSize:13, color:C.textMuted, marginBottom:16 }}>Mevcut planınız: <strong style={{color:C.purple}}>{planOf(school).label}</strong></div>
+
+      {/* Bekleyen talep uyarısı */}
+      {request && (
+        <div style={{ background:C.yellowSoft, border:`1px solid ${C.yellow}44`, borderRadius:14, padding:16, marginBottom:18 }}>
+          <div style={{ fontSize:14, fontWeight:800, color:C.yellow, marginBottom:6 }}>⏳ Onay bekleyen talep</div>
+          <div style={{ fontSize:13, color:C.textMuted, lineHeight:1.6, marginBottom:12 }}><strong style={{color:C.text}}>{PLANS[request.plan]?.label}</strong> planına geçiş talebiniz alındı. Ödemeniz kontrol edildikten sonra planınız aktifleştirilecektir.</div>
+          <button onClick={()=>setReqPlan(request.plan)} style={{ width:"100%", background:C.surface, border:`1px solid ${C.border}`, color:C.text, borderRadius:10, padding:9, fontSize:12, fontWeight:700, cursor:"pointer", marginBottom:8 }}>Havale Bilgilerini Göster</button>
+          <button onClick={onCancelRequest} style={{ width:"100%", background:"none", border:"none", color:C.textMuted, fontSize:12, cursor:"pointer", textDecoration:"underline" }}>Talebi iptal et</button>
+        </div>
+      )}
 
       {/* Mevcut kullanım */}
       <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:14, marginBottom:20, display:"flex", justifyContent:"space-around" }}>
@@ -615,32 +656,68 @@ function PlanScreen({ school, teachers, categories, allTasks, onBack, onChangePl
       <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
         {planList.map(p=>{
           const aktif = current===p.key;
+          const rank = PLANS[p.key].rank;
+          const isUpgrade = rank > currentRank;
+          const isDowngrade = rank < currentRank;
+          const pendingThis = request && request.plan === p.key;
           return (
             <div key={p.key} style={{ background:C.card, border:`1.5px solid ${aktif?p.renk:C.border}`, borderRadius:16, padding:18, position:"relative" }}>
               {aktif && <div style={{ position:"absolute", top:-10, right:16, background:p.renk, color:"#fff", fontSize:10, fontWeight:700, padding:"3px 12px", borderRadius:20 }}>MEVCUT PLAN</div>}
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:12 }}>
                 <div style={{ fontSize:16, fontWeight:800, color:C.text }}>{PLANS[p.key].label}</div>
-                <div style={{ textAlign:"right" }}><span style={{ fontSize:22, fontWeight:900, color:C.text }}>{p.fiyat}</span><div style={{ fontSize:10, color:C.textDim }}>{p.per}</div></div>
+                <div style={{ textAlign:"right" }}><span style={{ fontSize:22, fontWeight:900, color:C.text }}>{planFiyat[p.key]}</span><div style={{ fontSize:10, color:C.textDim }}>{p.per}</div></div>
               </div>
               <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:14 }}>
                 {feats[p.key].map(f=><div key={f} style={{ fontSize:12, color:C.textMuted, display:"flex", gap:7 }}><span style={{ color:p.renk }}>✓</span>{f}</div>)}
               </div>
-              {!aktif && <button onClick={()=>setConfirm(p.key)} style={{ width:"100%", background:p.key==="free"?C.surface:`linear-gradient(135deg,${C.accent},#7c3aed)`, border:p.key==="free"?`1px solid ${C.border}`:"none", color:p.key==="free"?C.textMuted:"#fff", borderRadius:12, padding:11, fontSize:14, fontWeight:700, cursor:"pointer" }}>{p.key==="free"?"Ücretsiz Plana Geç":`${PLANS[p.key].label} Planına Geç`}</button>}
+              {aktif ? null : pendingThis ? (
+                <div style={{ width:"100%", background:C.yellowSoft, border:`1px solid ${C.yellow}44`, color:C.yellow, borderRadius:12, padding:11, fontSize:13, fontWeight:700, textAlign:"center" }}>⏳ Onay bekliyor</div>
+              ) : isUpgrade ? (
+                <button onClick={()=>setReqPlan(p.key)} style={{ width:"100%", background:`linear-gradient(135deg,${C.accent},#7c3aed)`, border:"none", color:"#fff", borderRadius:12, padding:11, fontSize:14, fontWeight:700, cursor:"pointer" }}>{PLANS[p.key].label} Planına Geç</button>
+              ) : isDowngrade ? (
+                <button onClick={()=>setConfirmDown(p.key)} style={{ width:"100%", background:C.surface, border:`1px solid ${C.border}`, color:C.textMuted, borderRadius:12, padding:11, fontSize:14, fontWeight:700, cursor:"pointer" }}>Bu Plana Düş</button>
+              ) : null}
             </div>
           );
         })}
       </div>
 
-      <div style={{ fontSize:11, color:C.textDim, marginTop:18, textAlign:"center", lineHeight:1.6 }}>Plan değişikliğinde verileriniz korunur. Ücretsiz plana geçişte limit üstü mevcut kayıtlarınız silinmez, yalnızca yeni ekleme limitleri uygulanır.</div>
+      <div style={{ fontSize:11, color:C.textDim, marginTop:18, textAlign:"center", lineHeight:1.6 }}>Üst planlara geçiş, ödemenizin kontrolü sonrası aktifleştirilir. Plan değişikliğinde verileriniz korunur; alt plana geçişte mevcut kayıtlarınız silinmez, yalnızca yeni ekleme limitleri uygulanır.</div>
 
-      {confirm && (
+      {/* HAVALE BİLGİ EKRANI (yükseltme talebi) */}
+      {reqPlan && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.7)", display:"flex", alignItems:"center", justifyContent:"center", padding:20, zIndex:200 }}>
+          <div style={{ background:C.card, borderRadius:18, padding:24, maxWidth:340, width:"100%", border:`1px solid ${C.border}`, maxHeight:"90vh", overflowY:"auto" }}>
+            <div style={{ fontSize:17, fontWeight:800, color:C.text, marginBottom:4 }}>{PLANS[reqPlan].label} Planı</div>
+            <div style={{ fontSize:13, color:C.textMuted, marginBottom:18 }}>Yıllık ücret: <strong style={{color:C.text}}>{planFiyat[reqPlan]}</strong></div>
+
+            <div style={{ background:C.surface, borderRadius:12, padding:16, marginBottom:16 }}>
+              <div style={{ fontSize:11, fontWeight:800, color:C.textMuted, marginBottom:12, letterSpacing:1 }}>HAVALE / EFT BİLGİLERİ</div>
+              {[["Ünvan",ODEME.unvan],["Banka",ODEME.banka],["IBAN",ODEME.iban]].map(([k,v])=>(
+                <div key={k} style={{ marginBottom:10 }}><div style={{ fontSize:10, color:C.textDim }}>{k}</div><div style={{ fontSize:13, fontWeight:700, color:C.text, wordBreak:"break-all" }}>{v}</div></div>
+              ))}
+              <div style={{ fontSize:11, color:C.yellow, marginTop:8, lineHeight:1.5 }}>ℹ {ODEME.aciklama}</div>
+            </div>
+
+            <div style={{ fontSize:12, color:C.textMuted, lineHeight:1.6, marginBottom:18 }}>Ödemenizi yaptıktan sonra "Talep Oluştur" butonuna basın. Ödemeniz kontrol edildikten sonra (genellikle 1 iş günü) planınız otomatik aktifleşir. Sorularınız için: <strong style={{color:C.accent}}>{ODEME.iletisim}</strong></div>
+
+            <div style={{ display:"flex", gap:10 }}>
+              <button onClick={()=>setReqPlan(null)} style={{ flex:1, background:C.surface, border:`1px solid ${C.border}`, color:C.textMuted, borderRadius:10, padding:11, fontSize:13, cursor:"pointer" }}>Kapat</button>
+              {!(request && request.plan===reqPlan) && <button onClick={()=>{onRequest(reqPlan);setReqPlan(null);}} style={{ flex:1.4, background:`linear-gradient(135deg,${C.accent},#7c3aed)`, border:"none", color:"#fff", borderRadius:10, padding:11, fontSize:13, fontWeight:700, cursor:"pointer" }}>Talep Oluştur</button>}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DÜŞÜRME ONAYI */}
+      {confirmDown && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", display:"flex", alignItems:"center", justifyContent:"center", padding:24, zIndex:200 }}>
           <div style={{ background:C.card, borderRadius:18, padding:24, maxWidth:320, width:"100%", border:`1px solid ${C.border}` }}>
-            <div style={{ fontSize:16, fontWeight:800, color:C.text, marginBottom:10 }}>Plan değişikliği</div>
-            <div style={{ fontSize:13, color:C.textMuted, lineHeight:1.6, marginBottom:20 }}>Planınız <strong style={{color:C.purple}}>{PLANS[confirm].label}</strong> olarak güncellenecek. Onaylıyor musunuz?</div>
+            <div style={{ fontSize:16, fontWeight:800, color:C.text, marginBottom:10 }}>Plana düşür</div>
+            <div style={{ fontSize:13, color:C.textMuted, lineHeight:1.6, marginBottom:20 }}>Planınız <strong style={{color:C.text}}>{PLANS[confirmDown].label}</strong> olarak değiştirilecek. Mevcut verileriniz korunur, ancak bu planın limitleri uygulanmaya başlar. Onaylıyor musunuz?</div>
             <div style={{ display:"flex", gap:10 }}>
-              <button onClick={()=>setConfirm(null)} style={{ flex:1, background:C.surface, border:`1px solid ${C.border}`, color:C.textMuted, borderRadius:10, padding:11, fontSize:13, cursor:"pointer" }}>İptal</button>
-              <button onClick={()=>{onChangePlan(confirm);setConfirm(null);}} style={{ flex:1, background:`linear-gradient(135deg,${C.accent},#7c3aed)`, border:"none", color:"#fff", borderRadius:10, padding:11, fontSize:13, fontWeight:700, cursor:"pointer" }}>Onayla</button>
+              <button onClick={()=>setConfirmDown(null)} style={{ flex:1, background:C.surface, border:`1px solid ${C.border}`, color:C.textMuted, borderRadius:10, padding:11, fontSize:13, cursor:"pointer" }}>İptal</button>
+              <button onClick={()=>{onDowngrade(confirmDown);setConfirmDown(null);}} style={{ flex:1, background:C.red, border:"none", color:"#fff", borderRadius:10, padding:11, fontSize:13, fontWeight:700, cursor:"pointer" }}>Onayla</button>
             </div>
           </div>
         </div>
