@@ -1,0 +1,64 @@
+{
+  "landing": {
+    "title": "TaskiPro",
+    "subtitle": "School Task Management System",
+    "description": "Simplify task management for teachers and administrators",
+    "schoolButton": "School Login",
+    "getStarted": "Get Started",
+    "features": "Features"
+  },
+  "auth": {
+    "schoolCode": "School Code",
+    "username": "Username",
+    "password": "Password",
+    "login": "Login",
+    "selectRole": "Select Role",
+    "admin": "Administrator",
+    "teacher": "Teacher",
+    "cancel": "Cancel",
+    "forgotPassword": "Forgot Password?"
+  },
+  "dashboard": {
+    "overview": "Overview",
+    "tasks": "Tasks",
+    "teachers": "Teachers",
+    "messages": "Messages",
+    "profile": "Profile",
+    "logout": "Logout",
+    "welcome": "Welcome",
+    "categories": "Categories",
+    "totalTasks": "Total Tasks",
+    "completed": "Completed",
+    "overdue": "Overdue",
+    "performanceReport": "Performance Report",
+    "upcomingTasks": "Upcoming Tasks"
+  },
+  "teacherPanel": {
+    "myTasks": "My Tasks",
+    "contact": "Contact",
+    "profile": "Profile",
+    "sendMessage": "Send Message to Administration",
+    "changePassword": "Change Password",
+    "logout": "Logout",
+    "yourTasks": "Your Tasks",
+    "status": "Status",
+    "dueDate": "Due Date",
+    "pending": "Pending",
+    "completed": "Completed",
+    "overdue": "Overdue",
+    "newPassword": "New Password",
+    "confirmPassword": "Confirm Password"
+  },
+  "common": {
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "add": "Add",
+    "search": "Search",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "noData": "No data available"
+  }
+}

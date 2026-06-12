@@ -1,0 +1,64 @@
+{
+  "landing": {
+    "title": "TaskiPro",
+    "subtitle": "Okul Görev Yönetim Sistemi",
+    "description": "Öğretmen ve yöneticiler için görev yönetimini basitleştirin",
+    "schoolButton": "Okul Girişi",
+    "getStarted": "Başla",
+    "features": "Özellikler"
+  },
+  "auth": {
+    "schoolCode": "Okul Kodu",
+    "username": "Kullanıcı Adı",
+    "password": "Şifre",
+    "login": "Giriş Yap",
+    "selectRole": "Rol Seçin",
+    "admin": "Yönetici",
+    "teacher": "Öğretmen",
+    "cancel": "İptal",
+    "forgotPassword": "Şifrenizi mi unuttunuz?"
+  },
+  "dashboard": {
+    "overview": "Genel Bakış",
+    "tasks": "Görevler",
+    "teachers": "Öğretmenler",
+    "messages": "Mesajlar",
+    "profile": "Profil",
+    "logout": "Çıkış Yap",
+    "welcome": "Hoş Geldiniz",
+    "categories": "Kategoriler",
+    "totalTasks": "Toplam Görev",
+    "completed": "Tamamlanan",
+    "overdue": "Gecikmiş",
+    "performanceReport": "Performans Raporu",
+    "upcomingTasks": "Yaklaşan Görevler"
+  },
+  "teacherPanel": {
+    "myTasks": "Görevlerim",
+    "contact": "İletişim",
+    "profile": "Profil",
+    "sendMessage": "Yönetime Mesaj Gönder",
+    "changePassword": "Şifre Değiştir",
+    "logout": "Çıkış Yap",
+    "yourTasks": "Görevleriniz",
+    "status": "Durum",
+    "dueDate": "Son Tarih",
+    "pending": "Bekleniyor",
+    "completed": "Tamamlandı",
+    "overdue": "Gecikmiş",
+    "newPassword": "Yeni Şifre",
+    "confirmPassword": "Şifre Tekrar"
+  },
+  "common": {
+    "save": "Kaydet",
+    "delete": "Sil",
+    "edit": "Düzenle",
+    "close": "Kapat",
+    "add": "Ekle",
+    "search": "Ara",
+    "loading": "Yükleniyor...",
+    "error": "Hata",
+    "success": "Başarılı",
+    "noData": "Veri yok"
+  }
+}
