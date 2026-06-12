@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 
 export default function Landing({ onLogin, onSetup }) {
   const [openFaq, setOpenFaq] = useState(null);
+  const [modal, setModal] = useState(null); // "iletisim" | "yardim" | null
   const starsRef = useRef(null);
 
   useEffect(() => {
@@ -386,8 +387,8 @@ export default function Landing({ onLogin, onSetup }) {
                 <h4>Destek</h4>
                 <ul>
                   <li><button onClick={() => scrollTo("sss")}>SSS</button></li>
-                  <li><a href="mailto:info@taskipro.com" style={{ textDecoration:"none" }}><button>Yardım Merkezi</button></a></li>
-                  <li><a href="mailto:info@taskipro.com" style={{ textDecoration:"none" }}><button>İletişim</button></a></li>
+                  <li><button onClick={() => setModal("yardim")}>Yardım Merkezi</button></li>
+                  <li><button onClick={() => setModal("iletisim")}>İletişim</button></li>
                 </ul>
               </div>
               <div className="foot-col">
@@ -405,6 +406,44 @@ export default function Landing({ onLogin, onSetup }) {
             </div>
           </div>
         </footer>
+
+        {/* BİLGİ PENCERELERİ */}
+        {modal && (
+          <div onClick={() => setModal(null)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.7)", display:"flex", alignItems:"center", justifyContent:"center", padding:20, zIndex:1000 }}>
+            <div onClick={(e)=>e.stopPropagation()} style={{ background:"#161922", border:"1px solid rgba(148,163,213,0.18)", borderRadius:20, padding:28, maxWidth:420, width:"100%", maxHeight:"85vh", overflowY:"auto", color:"#e8eaf0", fontFamily:"'Nunito',system-ui,sans-serif" }}>
+              {modal === "iletisim" ? (
+                <>
+                  <div style={{ fontSize:22, fontWeight:900, marginBottom:6 }}>İletişim</div>
+                  <div style={{ fontSize:14, color:"#9ca3bd", lineHeight:1.7, marginBottom:20 }}>Sorularınız, talepleriniz ve destek ihtiyaçlarınız için bize her zaman ulaşabilirsiniz. En kısa sürede dönüş yapıyoruz.</div>
+                  <div style={{ background:"#1e2230", borderRadius:14, padding:18, marginBottom:18 }}>
+                    <div style={{ fontSize:12, color:"#5d6478", fontWeight:700, marginBottom:6 }}>E-POSTA</div>
+                    <a href="mailto:info@taskipro.com" style={{ fontSize:16, fontWeight:800, color:"#a78bfa", textDecoration:"none" }}>info@taskipro.com</a>
+                    <div style={{ fontSize:13, color:"#9ca3bd", marginTop:14, lineHeight:1.6 }}>Genel bilgi, teknik destek, plan ve ödeme işlemleri — hepsi bu adres üzerinden yürütülür.</div>
+                  </div>
+                  <div style={{ fontSize:13, color:"#7a85a0", lineHeight:1.7 }}>📍 Türkiye'deki okullar için geliştirilmiştir.<br/>🕐 Genellikle 1 iş günü içinde yanıt veriyoruz.</div>
+                </>
+              ) : (
+                <>
+                  <div style={{ fontSize:22, fontWeight:900, marginBottom:6 }}>Yardım Merkezi</div>
+                  <div style={{ fontSize:14, color:"#9ca3bd", lineHeight:1.7, marginBottom:20 }}>TaskiPro'yu kullanırken aklınıza takılanlar için hızlı rehber. Daha fazlası için SSS bölümüne göz atabilir ya da bize yazabilirsiniz.</div>
+                  {[
+                    ["🏫 Okul kaydı nasıl yapılır?", "Ana sayfadaki \"Okul Kaydı\" butonundan okul adınızı ve kurum kodunuzu girerek saniyeler içinde kaydolabilirsiniz."],
+                    ["🔑 Öğretmenler nasıl giriş yapar?", "Müdür öğretmeni eklerken bir başlangıç şifresi verir. Öğretmen ilk girişte kendi şifresini belirler."],
+                    ["📊 Performans raporu nerede?", "Yönetici panelindeki \"Performans Raporu\" bölümünden öğretmen bazlı dönemlik özetlere ulaşabilirsiniz (Okul+ planı)."],
+                    ["💳 Plan nasıl yükseltilir?", "Panelde plan rozetine tıklayın, istediğiniz planı seçin ve havale bilgileriyle ödemenizi yapın."],
+                  ].map(([q,a])=>(
+                    <div key={q} style={{ background:"#1e2230", borderRadius:12, padding:14, marginBottom:10 }}>
+                      <div style={{ fontSize:14, fontWeight:800, marginBottom:5 }}>{q}</div>
+                      <div style={{ fontSize:13, color:"#9ca3bd", lineHeight:1.6 }}>{a}</div>
+                    </div>
+                  ))}
+                  <div style={{ fontSize:13, color:"#7a85a0", lineHeight:1.7, marginTop:8 }}>Başka bir sorunuz mu var? <a href="mailto:info@taskipro.com" style={{ color:"#a78bfa", fontWeight:700, textDecoration:"none" }}>info@taskipro.com</a> adresinden bize yazın.</div>
+                </>
+              )}
+              <button onClick={() => setModal(null)} style={{ width:"100%", marginTop:20, background:"linear-gradient(135deg,#4f8ef7,#7c3aed)", border:"none", color:"#fff", borderRadius:12, padding:12, fontSize:14, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>Kapat</button>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>
