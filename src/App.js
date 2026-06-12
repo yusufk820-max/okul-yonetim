@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { dbGet, dbSet, dbPush, dbUpdate, dbDelete, dbListen } from "./firebase";
-import Landing from "./Landing";        // ← YENİ SATIR
+import Landing from "./Landing";
+import RoleSelector from "./RoleSelector";          // ← EKLE
+import AdminLoginWeb from "./AdminLoginWeb";        // ← EKLE
+import TeacherLoginWeb from "./TeacherLoginWeb";    // ← EKLE
 
 // ─── RENKLER ─────────────────────────────────────────────────
 const C = {
@@ -1221,27 +1224,103 @@ export default function App() {
   const [session, setSession] = useState(() => {
     try { const s = localStorage.getItem("okul_session"); return s ? JSON.parse(s) : null; } catch { return null; }
   });
-  const [view, setView] = useState("landing");   // ← YENİ: "landing" | "login" | "setup"
 
-  const handleLogin = s => {
+  // View State
+  const [view, setView] = useState("landing");
+  const [selectedRole, setSelectedRole] = useState(null); // "admin" | "teacher"
+  const [selectedSchool, setSelectedSchool] = useState(null);
+  const [selectedCode, setSelectedCode] = useState(null);
+
+  // Device Type Detection (768px = mobil/tablet sınırı)
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const handleSelectRole = (role, school, code) => {
+    setSelectedRole(role);
+    setSelectedSchool(school);
+    setSelectedCode(code);
+    if (role === "admin") {
+      setView("adminLoginWeb");
+    } else {
+      setView("teacherLoginWeb");
+    }
+  };
+
+  const handleLogin = (s) => {
     setSession(s);
     try { localStorage.setItem("okul_session", JSON.stringify(s)); } catch {}
   };
 
   const handleLogout = () => {
     setSession(null);
-    setView("landing");                            // ← çıkışta landing'e dön
+    setView("landing");
+    setSelectedRole(null);
+    setSelectedSchool(null);
+    setSelectedCode(null);
     try { localStorage.removeItem("okul_session"); } catch {}
   };
 
-  // Giriş yapılmışsa direkt panele git (landing'i atla)
+  // ─── SESSION KONTROLÜ ───────────────────────────
+  // Giriş yapılmışsa direkt panele git
   if (session) {
     if (session.role === "teacher") return <TeacherPanel session={session} onLogout={handleLogout} />;
     return <AdminPanel session={session} onLogout={handleLogout} />;
   }
 
-  // Giriş yapılmamışsa: landing / login / setup arasında geçiş
-  if (view === "setup") return <SchoolSetup onDone={() => setView("login")} onBack={() => setView("landing")} />;
-  if (view === "login") return <LoginScreen onLogin={handleLogin} onSetup={() => setView("setup")} onBack={() => setView("landing")} />;
-  return <Landing onLogin={() => setView("login")} onSetup={() => setView("setup")} />;
+  // ─── DESKTOP WEB LOGIN SAYFASI ───────────────────────────
+  if (!isMobile && view === "adminLoginWeb" && selectedSchool && selectedCode) {
+    return (
+      <AdminLoginWeb
+        school={selectedSchool}
+        schoolCode={selectedCode}
+        onLogin={handleLogin}
+        onBack={() => setView("roleSelect")}
+      />
+    );
+  }
+
+  if (!isMobile && view === "teacherLoginWeb" && selectedSchool && selectedCode) {
+    return (
+      <TeacherLoginWeb
+        school={selectedSchool}
+        schoolCode={selectedCode}
+        onLogin={handleLogin}
+        onBack={() => setView("roleSelect")}
+      />
+    );
+  }
+
+  // ─── DESKTOP WEB ROL SEÇİMİ ───────────────────────────
+  if (!isMobile && view === "roleSelect") {
+    return (
+      <RoleSelector
+        onSelectRole={handleSelectRole}
+        onBack={() => setView("landing")}
+      />
+    );
+  }
+
+  // ─── MOBİL LOGIN SAYFASI (ESKI SİSTEM) ───────────────────────────
+  if (isMobile && view === "login") {
+    return <LoginScreen onLogin={handleLogin} onSetup={() => setView("setup")} onBack={() => setView("landing")} />;
+  }
+
+  if (isMobile && view === "setup") {
+    return <SchoolSetup onDone={() => setView("login")} onBack={() => setView("landing")} />;
+  }
+
+  // ─── LANDING SAYFASI ───────────────────────────
+  return (
+    <Landing
+      onLogin={() => setView(isMobile ? "login" : "roleSelect")}
+      onSetup={() => setView("setup")}
+    />
+  );
 }
