@@ -386,8 +386,8 @@ export default function Landing({ onLogin, onSetup }) {
                 <h4>Destek</h4>
                 <ul>
                   <li><button onClick={() => scrollTo("sss")}>SSS</button></li>
-                  <li><button>Yardım Merkezi</button></li>
-                  <li><button>İletişim</button></li>
+                  <li><a href="mailto:info@taskipro.com" style={{ textDecoration:"none" }}><button>Yardım Merkezi</button></a></li>
+                  <li><a href="mailto:info@taskipro.com" style={{ textDecoration:"none" }}><button>İletişim</button></a></li>
                 </ul>
               </div>
               <div className="foot-col">
@@ -401,7 +401,7 @@ export default function Landing({ onLogin, onSetup }) {
             </div>
             <div className="foot-bottom">
               <span>© 2026 TaskiPro · taskipro.com — Tüm hakları saklıdır.</span>
-              <span>Türkiye'de okullar için 💜 ile yapıldı</span>
+              <span>İletişim: <a href="mailto:info@taskipro.com" style={{ color:"#a78bfa", textDecoration:"none", fontWeight:700 }}>info@taskipro.com</a></span>
             </div>
           </div>
         </footer>
