@@ -41,11 +41,11 @@ const limitText = (n) => n === Infinity ? "Sınırsız" : n;
 
 // ─── HAVALE BİLGİLERİ (BURAYI KENDİ BİLGİLERİNLE DEĞİŞTİR) ───
 const ODEME = {
-  unvan: "YUSUF KARABIYIK",
-  banka: "T.C YAPI KREDİ BANKASI A.Ş",
-  iban: "TR00 1234 5678 0000 0000 0000 00",
+  unvan: "Ad Soyad / Firma Ünvanı",
+  banka: "Banka Adı",
+  iban: "TR00 0000 0000 0000 0000 0000 00",
   aciklama: "Okul kurum kodunuzu havale açıklamasına yazınız.",
-  iletisim: "destek@taskipro.com",
+  iletisim: "info@taskipro.com",
 };
 const planFiyat = { free: "₺0", okul: "₺2.990", okulplus: "₺5.990" };
 
