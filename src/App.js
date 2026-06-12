@@ -652,7 +652,6 @@ function PlanScreen({ school, teachers, categories, allTasks, onBack, onChangePl
 // ─── KATEGORİ EKLE ────────────────────────────────────────────
 const CAT_ICONS = ["📂","🏅","🎯","📝","🏆","📌","🎓","📊","🔔","📅","🌟","📋","🎨","🔧","📣"];
 const CAT_COLORS = ["#4f8ef7","#f97316","#a78bfa","#34d399","#f87171","#fbbf24","#ec4899","#06b6d4","#84cc16","#f59e0b"];
-const CAT_COLORS = ["#4f8ef7","#f97316","#a78bfa","#34d399","#f87171","#fbbf24","#ec4899","#06b6d4","#84cc16","#f59e0b"];
 
 function AddCategory({ onAdd, onBack }) {
   const [title, setTitle] = useState("");
