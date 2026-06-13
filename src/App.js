@@ -700,11 +700,105 @@ function ReportScreen({ teachers, allTasks, school, onBack, onUpgrade }) {
   // Seçili döneme göre görevleri filtrele
   const filtered = selTerm === "all" ? allTasks : allTasks.filter(t => termOfDate(t.dueDate)?.key === selTerm);
 
+  // ─── PDF (Yazdır → PDF olarak kaydet) ───
+  const handleDownloadPDF = () => {
+    const termLabel = selTerm === "all" ? "Tüm Zamanlar" : (terms.find(t => t.key === selTerm)?.label || "");
+    const schoolName = school?.name || "Okul";
+    const today = fmtRDate(new Date());
+
+    const rows = teachers.map(teacher => {
+      const s = teacherStats(filtered, teacher.id);
+      const oran = s.assigned > 0 ? Math.round((s.onTime / s.assigned) * 100) : 0;
+      return { name: teacher.name, branch: teacher.branch || "-", ...s, oran };
+    });
+
+    const tot = rows.reduce((a, r) => ({
+      assigned: a.assigned + r.assigned, onTime: a.onTime + r.onTime,
+      late: a.late + r.late, overdue: a.overdue + r.overdue, pending: a.pending + r.pending,
+    }), { assigned: 0, onTime: 0, late: 0, overdue: 0, pending: 0 });
+    const totOran = tot.assigned > 0 ? Math.round((tot.onTime / tot.assigned) * 100) : 0;
+
+    const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const oranColor = (o) => o >= 70 ? "#16a34a" : o >= 40 ? "#d97706" : "#dc2626";
+
+    const rowsHtml = rows.map((r, i) => `
+      <tr style="background:${i % 2 ? "#f8fafc" : "#ffffff"}">
+        <td style="text-align:left;font-weight:600">${esc(r.name)}</td>
+        <td>${esc(r.branch)}</td>
+        <td>${r.assigned}</td>
+        <td style="color:#16a34a;font-weight:700">${r.onTime}</td>
+        <td style="color:#dc2626">${r.late}</td>
+        <td style="color:#dc2626">${r.overdue}</td>
+        <td style="color:#d97706">${r.pending}</td>
+        <td style="font-weight:800;color:${oranColor(r.oran)}">%${r.oran}</td>
+      </tr>`).join("");
+
+    const html = `<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8">
+      <title>Performans Raporu - ${esc(schoolName)}</title>
+      <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif; color:#1e293b; padding:32px; }
+        .head { border-bottom:3px solid #4f8ef7; padding-bottom:16px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:flex-end; }
+        .head h1 { font-size:22px; color:#0f172a; }
+        .head .sub { font-size:13px; color:#64748b; margin-top:4px; }
+        .head .meta { text-align:right; font-size:12px; color:#64748b; line-height:1.6; }
+        .head .meta b { color:#0f172a; }
+        table { width:100%; border-collapse:collapse; margin-top:18px; font-size:12px; }
+        th, td { padding:9px 8px; text-align:center; border-bottom:1px solid #e2e8f0; }
+        th { background:#0f172a; color:#fff; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.3px; }
+        th:first-child, td:first-child { text-align:left; }
+        tfoot td { border-top:2px solid #0f172a; font-weight:800; background:#f1f5f9; }
+        .note { margin-top:16px; font-size:10.5px; color:#94a3b8; line-height:1.6; border-top:1px solid #e2e8f0; padding-top:12px; }
+        @media print { body { padding:0; } @page { margin:1.5cm; } }
+      </style></head><body>
+      <div class="head">
+        <div>
+          <h1>📊 Performans Raporu</h1>
+          <div class="sub">Öğretmen bazlı görev özeti</div>
+        </div>
+        <div class="meta">
+          <div><b>${esc(schoolName)}</b></div>
+          <div>Dönem: <b>${esc(termLabel)}</b></div>
+          <div>Tarih: ${today}</div>
+        </div>
+      </div>
+      <table>
+        <thead><tr>
+          <th>Öğretmen</th><th>Branş</th><th>Atanan</th><th>Zamanında</th>
+          <th>Geç</th><th>Yapılmadı</th><th>Bekliyor</th><th>Başarı</th>
+        </tr></thead>
+        <tbody>${rowsHtml}</tbody>
+        <tfoot><tr>
+          <td>TOPLAM</td><td>${rows.length} öğretmen</td>
+          <td>${tot.assigned}</td><td style="color:#16a34a">${tot.onTime}</td>
+          <td style="color:#dc2626">${tot.late}</td><td style="color:#dc2626">${tot.overdue}</td>
+          <td style="color:#d97706">${tot.pending}</td>
+          <td style="color:${oranColor(totOran)}">%${totOran}</td>
+        </tr></tfoot>
+      </table>
+      <div class="note">"Başarı" oranı, atanan görevlerin son tarihinden önce tamamlananlarının yüzdesidir. "Geç" son tarihten sonra tamamlanan, "Yapılmadı" son tarihi geçmiş ve hâlâ tamamlanmamış, "Bekliyor" ise son tarihi gelmemiş görevlerdir. Eski görevlerde tamamlanma zamanı kayıtlı değilse zamanında sayılır.</div>
+      </body></html>`;
+
+    const w = window.open("", "_blank");
+    if (!w) { alert("PDF için açılır pencereye izin verin."); return; }
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    setTimeout(() => { w.print(); }, 500);
+  };
+
   return (
     <div style={{ padding:"0 16px 24px" }}>
       <button onClick={onBack} style={{ background:"none", border:"none", color:C.accent, fontSize:14, cursor:"pointer", marginBottom:16, padding:0, fontWeight:600 }}>← Geri</button>
-      <div style={{ fontSize:22, fontWeight:800, color:C.text, marginBottom:4 }}>📊 Performans Raporu</div>
-      <div style={{ fontSize:13, color:C.textMuted, marginBottom:18 }}>Öğretmen bazlı görev özeti</div>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12, marginBottom:18, flexWrap:"wrap" }}>
+        <div>
+          <div style={{ fontSize:22, fontWeight:800, color:C.text, marginBottom:4 }}>📊 Performans Raporu</div>
+          <div style={{ fontSize:13, color:C.textMuted }}>Öğretmen bazlı görev özeti</div>
+        </div>
+        {teachers.length > 0 && (
+          <button onClick={handleDownloadPDF} style={{ flexShrink:0, background:`linear-gradient(135deg,${C.accent},#7c3aed)`, border:"none", color:"#fff", borderRadius:12, padding:"10px 16px", fontSize:13, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:7 }}>⬇ PDF İndir</button>
+        )}
+      </div>
 
       {/* Dönem seçici */}
       <div style={{ display:"flex", gap:8, overflowX:"auto", marginBottom:20, paddingBottom:4 }}>
